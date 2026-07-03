@@ -12,7 +12,6 @@ Docs: https://docs.nvidia.com/nurec/api/grpc_api_guide.html
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
@@ -40,17 +39,19 @@ class NuRecClient:
 
     def __init__(self, address: str = "localhost:8080") -> None:
         self.address = address
-        self._stub: Optional[object] = None
+        self._stub: object | None = None
 
     def _get_stub(self) -> object:
         if self._stub is None:
             try:
-                import grpc
-                from nre.grpc.protos.sensorsim_pb2_grpc import SensorsimServiceStub
+                import grpc  # type: ignore[import-untyped]
+                from nre.grpc.protos.sensorsim_pb2_grpc import (  # type: ignore[import-not-found]
+                    SensorsimServiceStub,
+                )
             except ImportError as e:
                 raise ImportError(
                     "grpcio and NuRec protos required. "
-                    "Run: pip install grpcio  and ensure NuRec container is running."
+                    "Run: pip install grpcio and ensure NuRec container is running."
                 ) from e
             channel = grpc.insecure_channel(self.address)
             self._stub = SensorsimServiceStub(channel)
@@ -63,10 +64,10 @@ class NuRecClient:
         height: int = 1080,
     ) -> RGBImage:
         """Render an RGB image from the given camera pose."""
-        from nre.grpc.protos.sensorsim_pb2 import (
-            RGBRenderRequest,
+        from nre.grpc.protos.sensorsim_pb2 import (  # type: ignore[import-not-found]
             ImageFormat,
             PosePair,
+            RGBRenderRequest,
         )
         stub = self._get_stub()
         request = RGBRenderRequest(
@@ -78,7 +79,7 @@ class NuRecClient:
             height=height,
             format=ImageFormat.RGB,
         )
-        response = stub.render_rgb(request)
+        response = stub.render_rgb(request)  # type: ignore[attr-defined]
         return RGBImage(width=width, height=height, data=response.image_data)
 
     def health_check(self) -> bool:

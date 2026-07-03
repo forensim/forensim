@@ -30,7 +30,7 @@ class TrajectoryPoint(BaseModel):
 
 class SimulateResponse(BaseModel):
     status: str
-    results: list[dict]
+    results: list[dict[str, object]]
 
 
 @router.post("/run", response_model=SimulateResponse)
@@ -46,8 +46,12 @@ async def run_simulation(req: SimulateRequest) -> SimulateResponse:
         scenarios = [
             SimulationScenario(
                 object_name=s.object_name,
-                velocity=tuple(s.velocity),          # type: ignore[arg-type]
-                angular_velocity=tuple(s.angular_velocity),  # type: ignore[arg-type]
+                velocity=(s.velocity[0], s.velocity[1], s.velocity[2]),
+                angular_velocity=(
+                    s.angular_velocity[0],
+                    s.angular_velocity[1],
+                    s.angular_velocity[2],
+                ),
             )
             for s in req.scenarios
         ]

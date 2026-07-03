@@ -41,6 +41,9 @@ dev = [
 sim = [
     "ovphysx>=0.4",
     "gsplat",
+    "torch",
+]
+nerf = [
     "nerfstudio",
     "torch",
 ]
@@ -48,6 +51,7 @@ sim = [
 [tool.maturin]
 python-source = "python"
 module-name = "forensim._core"
+manifest-path = "crates/forensim-core/Cargo.toml"
 features = ["pyo3/extension-module"]
 
 [tool.ruff]
@@ -60,3 +64,10 @@ select = ["E", "F", "I", "UP"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["python/tests"]
+pythonpath = ["python"]
+markers = [
+    "integration: tests that require external tools (COLMAP, CUDA, etc.)",
+]

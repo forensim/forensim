@@ -46,7 +46,7 @@ def rank_event_sequences(
         List of ScoredHypothesis, sorted best-to-worst.
     """
     try:
-        from forensim._core import MarkovChain  # type: ignore[import]
+        from forensim._core import MarkovChain  # type: ignore[import-untyped]
     except ImportError as e:
         raise ImportError(
             "forensim._core not built. Run: maturin develop --release"

@@ -34,10 +34,13 @@ class InferResponse(BaseModel):
 async def rank_hypotheses(req: InferRequest) -> InferResponse:
     """Rank candidate event sequences by probabilistic likelihood."""
     if len(req.sequences) != len(req.descriptions):
-        raise HTTPException(status_code=400, detail="sequences and descriptions must have equal length")
+        raise HTTPException(
+            status_code=400,
+            detail="sequences and descriptions must have equal length",
+        )
 
     try:
-        from forensim.infer.sequence import rank_event_sequences, integrate_physx_scores
+        from forensim.infer.sequence import integrate_physx_scores, rank_event_sequences
 
         hypotheses = rank_event_sequences(
             sequences=req.sequences,

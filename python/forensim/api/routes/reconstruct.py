@@ -7,6 +7,8 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from forensim.reconstruct.pipeline import ReconstructionPipeline
+
 router = APIRouter()
 
 
@@ -16,13 +18,15 @@ class ReconstructRequest(BaseModel):
     method: str = "gaussian_splatting"  # "gaussian_splatting" | "nerf" | "nurec"
     matcher: str = "exhaustive"          # "exhaustive" | "sequential"
     max_steps: int = 30_000
+    gsplat_fallback: bool = True
 
 
 class ReconstructResponse(BaseModel):
     status: str
     usd_path: str
     ply_path: str | None = None
-    message: str = ""
+    duration_seconds: float
+    message: str | None = ""
 
 
 @router.post("/run", response_model=ReconstructResponse)
@@ -31,7 +35,7 @@ async def run_reconstruction(req: ReconstructRequest) -> ReconstructResponse:
     Run the full 2D → 3D → USD reconstruction pipeline.
 
     1. COLMAP SfM
-    2. Gaussian Splatting (gsplat) or NeRF
+    2. Gaussian Splatting (gsplat) or fallback point-cloud export
     3. Export to USD
     """
     image_dir = Path(req.image_dir)
@@ -41,36 +45,19 @@ async def run_reconstruction(req: ReconstructRequest) -> ReconstructResponse:
         raise HTTPException(status_code=400, detail=f"image_dir not found: {image_dir}")
 
     try:
-        from forensim.reconstruct import colmap, gsplat, usd_export
-
-        # Step 1: COLMAP
-        sparse_dir = colmap.full_pipeline(image_dir, workspace_dir, matcher=req.matcher)
-
-        ply_path: Path | None = None
-        usd_path: Path | None = None
-
-        if req.method == "gaussian_splatting":
-            # Step 2: Gaussian Splatting
-            colmap_dir = sparse_dir / "0"
-            ply_path = gsplat.train(
-                colmap_dir=colmap_dir,
-                image_dir=image_dir,
-                output_dir=workspace_dir / "gsplat",
-                max_steps=req.max_steps,
-            )
-            # Step 3: USD export
-            usd_path = usd_export.ply_to_usd(
-                ply_path=ply_path,
-                output_path=workspace_dir / "scene.usdz",
-            )
-        else:
-            raise HTTPException(status_code=400, detail=f"Unknown method: {req.method}")
-
-        return ReconstructResponse(
-            status="success",
-            usd_path=str(usd_path),
-            ply_path=str(ply_path) if ply_path else None,
+        pipeline = ReconstructionPipeline(
+            matcher=req.matcher,
+            max_steps=req.max_steps,
+            gsplat_fallback=req.gsplat_fallback,
         )
-
+        result = pipeline.run(image_dir=image_dir, workspace_dir=workspace_dir)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    return ReconstructResponse(
+        status=result.status,
+        usd_path=str(result.usd_path),
+        ply_path=str(result.ply_path),
+        duration_seconds=result.duration_seconds,
+        message="Reconstruction pipeline complete" if result.status == "success" else result.error,
+    )

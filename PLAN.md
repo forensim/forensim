@@ -665,12 +665,14 @@ forensim/                          # D:\forensim\ (local) / github.com/forensim/
 - [ ] Write `AGENTS.md` with dev commands
 
 ### Phase 1 — Reconstruction Pipeline (Weeks 2-4)
-- [ ] Wrap COLMAP CLI in Python (`forensim.reconstruct.colmap`)
-- [ ] Integrate `gsplat` for Gaussian Splatting
-- [ ] Implement PLY → USD conversion (`omniverse-gsplat-converter`)
-- [ ] Build evidence ingestion UI (file picker, image grid)
-- [ ] Connect frontend → FastAPI → reconstruction pipeline
-- [ ] Display reconstructed 3DGS in Three.js viewport
+- [x] Wrap COLMAP CLI in Python (`forensim.reconstruct.colmap`)
+- [x] Integrate `gsplat` for Gaussian Splatting (fallback exporter + real trainer hook)
+- [x] Implement PLY → USD conversion (`omniverse-gsplat-converter`)
+- [x] Build end-to-end pipeline orchestrator with progress callbacks and manifest
+- [x] Add unit + integration tests for the reconstruction pipeline
+- [ ] Build evidence ingestion UI (file picker, image grid) — Phase 1.5
+- [ ] Connect frontend → FastAPI → reconstruction pipeline — Phase 1.5
+- [ ] Display reconstructed 3DGS in Three.js viewport — Phase 2
 
 ### Phase 2 — Physics Simulation (Weeks 5-7)
 - [ ] Integrate `ovphysx` for standalone PhysX simulation

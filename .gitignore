@@ -32,6 +32,10 @@ app/.tauri/
 *.bin
 *.db
 
+# Test fixtures (downloaded on demand)
+python/tests/fixtures/fountain/
+python/tests/fixtures/fountain.zip
+
 # IDE
 .vscode/settings.json
 .idea/

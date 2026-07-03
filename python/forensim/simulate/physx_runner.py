@@ -53,7 +53,7 @@ def run_scenario(
         SimulationResult with full trajectory data.
     """
     try:
-        from ovphysx import PhysX  # type: ignore[import]
+        from ovphysx import PhysX  # type: ignore[import-untyped]
     except ImportError as e:
         raise ImportError(
             "ovphysx not installed. Run: uv pip install ovphysx"

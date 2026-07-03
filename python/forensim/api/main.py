@@ -12,16 +12,17 @@ Or via the Tauri sidecar bundler (see app/src-tauri/src/sidecar.rs).
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routes import reconstruct, simulate, infer
+from .routes import infer, reconstruct, simulate
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):  # type: ignore[type-arg]
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Startup
     print("[forensim-api] started on http://127.0.0.1:8008")
     yield

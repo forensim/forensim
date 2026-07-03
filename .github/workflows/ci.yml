@@ -40,6 +40,8 @@ jobs:
 
       - name: Cargo test
         run: cargo test --workspace
+        env:
+          PYO3_PYTHON: python3
 
   # ─── Python extension (via Maturin) ─────────────────────────────────────────
   python:
@@ -71,6 +73,8 @@ jobs:
           source .venv/bin/activate
           uv pip install -e ".[dev]"
           maturin develop --release
+        env:
+          PYO3_PYTHON: ${{ env.pythonLocation }}/python
 
       - name: Ruff lint
         run: |
@@ -80,12 +84,12 @@ jobs:
       - name: Mypy type check
         run: |
           source .venv/bin/activate
-          mypy python/forensim/ --ignore-missing-imports
+          mypy python/forensim/
 
       - name: Pytest
         run: |
           source .venv/bin/activate
-          pytest python/tests/ -v --tb=short || true  # non-fatal until tests are written
+          pytest python/tests/ -v --tb=short
 
   # ─── Tauri desktop build (Windows) ───────────────────────────────────────────
   tauri:

@@ -11,6 +11,7 @@
 | Python | 3.12 (managed by uv) | `uv python install 3.12` |
 | CUDA Toolkit | 12.x+ | https://developer.nvidia.com/cuda-downloads |
 | NVIDIA Driver | 525+ | Windows Update or NVIDIA website |
+| COLMAP | 4.x | https://github.com/colmap/colmap/releases |
 
 ## First-Time Setup
 
@@ -31,12 +32,18 @@ uv pip install -e ".[dev]"
 uv pip install maturin
 maturin develop --release
 
-# 5. Install Tauri CLI and frontend deps
+# 5. Install COLMAP (Windows)
+# Download the latest CUDA-enabled Windows binary from:
+#   https://github.com/colmap/colmap/releases
+# Extract to a persistent location, e.g. D:\Tools\COLMAP, and add its bin folder to PATH:
+$env:Path = "D:\Tools\COLMAP\bin;$env:Path"
+
+# 6. Install Tauri CLI and frontend deps
 cd app
 npm install
 cd ..
 
-# 6. Install Tauri CLI globally (optional, also available via npm)
+# 7. Install Tauri CLI globally (optional, also available via npm)
 cargo install tauri-cli --version "^2"
 ```
 
@@ -141,6 +148,9 @@ forensim/
 # Optional: point to local Omniverse Kit installation
 $env:ISAAC_SIM_PATH = "C:\path\to\isaac_sim"
 
+# Optional: override the COLMAP binary path
+$env:COLMAP_PATH = "D:\Tools\COLMAP\bin\colmap.exe"
+
 # NuRec server address (default: localhost:8080)
 $env:NUREC_ADDRESS = "localhost:8080"
 
@@ -152,9 +162,10 @@ $env:FORENSIM_API_PORT = "8008"
 
 - **physx-rs is archived** — use `ovphysx` (Python) instead, called from Rust via PyO3
 - **Isaac Sim 6.x requires Python 3.12** — this project is locked to 3.12
-- **COLMAP must be installed separately** — not available via pip
+- **COLMAP must be installed separately** — not available via pip; set `COLMAP_PATH` or add its `bin` folder to PATH
 - **gsplat requires CUDA** — GPU mandatory for Gaussian Splatting training
 - `omniverse-gsplat-converter` handles PLY → USD conversion without needing a full Omniverse install
+- **nerfstudio is split into a separate `nerf` extra** because it pins protobuf 3.20, which conflicts with modern grpcio-tools
 
 ## Running Tests
 

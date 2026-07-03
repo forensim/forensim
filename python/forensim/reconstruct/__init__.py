@@ -6,4 +6,9 @@ Modules:
     gsplat      — 3D Gaussian Splatting pipeline (gsplat library)
     nurec       — NVIDIA NuRec gRPC client
     usd_export  — Gaussian Splat / mesh → OpenUSD converter
+    pipeline    — End-to-end reconstruction orchestrator
 """
+
+from forensim.reconstruct.pipeline import PipelineResult, ReconstructionPipeline
+
+__all__ = ["PipelineResult", "ReconstructionPipeline"]
