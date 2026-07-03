@@ -1,0 +1,47 @@
+# Rust
+/target/
+Cargo.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.pyd
+.venv/
+*.egg-info/
+dist/
+build/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+
+# Maturin
+*.whl
+
+# Node / Tauri
+app/node_modules/
+app/dist/
+app/src-tauri/target/
+app/.tauri/
+
+# NVIDIA / data
+*.usd
+*.usda
+*.usdz
+*.ply
+*.bin
+*.db
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets
+.env
+.env.*

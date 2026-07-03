@@ -1,0 +1,27 @@
+[package]
+name = "forensim-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Core Rust library: probabilistic sequence engine, statistical computing, USD scene types"
+
+[lib]
+name = "forensim_core"
+# cdylib for the Python extension module, rlib for use by other Rust crates (Tauri app)
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3 = { workspace = true }
+nalgebra = { workspace = true }
+ndarray = { workspace = true }
+statrs = { workspace = true }
+rayon = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+approx = "0.5"

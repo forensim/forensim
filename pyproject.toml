@@ -1,0 +1,62 @@
+[build-system]
+requires = ["maturin>=1.14,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "forensim"
+version = "0.1.0"
+description = "Forensic scene reconstruction and probabilistic event analysis"
+readme = "README.md"
+license = { text = "MIT OR Apache-2.0" }
+requires-python = ">=3.12"
+keywords = ["forensics", "reconstruction", "3d", "gaussian-splatting", "physics"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+]
+dependencies = [
+    "numpy>=1.26",
+    "open3d>=0.18",
+    "trimesh>=4.0",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "grpcio>=1.60",
+    "grpcio-tools>=1.60",
+    "httpx>=0.27",
+    "pymc>=5.0",
+    "usd-core>=24.0",
+    "omniverse-gsplat-converter[usd]>=0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "maturin>=1.14",
+    "pytest>=8.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "pyinstaller>=6.0",
+]
+sim = [
+    "ovphysx>=0.4",
+    "gsplat",
+    "nerfstudio",
+    "torch",
+]
+
+[tool.maturin]
+python-source = "python"
+module-name = "forensim._core"
+features = ["pyo3/extension-module"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true

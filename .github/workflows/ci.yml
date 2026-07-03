@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # ─── Rust ────────────────────────────────────────────────────────────────────
+  rust:
+    name: Rust check & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cargo fmt
+        run: cargo fmt --all -- --check
+
+      - name: Cargo clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Cargo test
+        run: cargo test --workspace
+
+  # ─── Python extension (via Maturin) ─────────────────────────────────────────
+  python:
+    name: Python lint & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-maturin-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install Python dev deps + build Rust extension
+        run: |
+          uv venv --python 3.12 .venv
+          source .venv/bin/activate
+          uv pip install -e ".[dev]"
+          maturin develop --release
+
+      - name: Ruff lint
+        run: |
+          source .venv/bin/activate
+          ruff check python/
+
+      - name: Mypy type check
+        run: |
+          source .venv/bin/activate
+          mypy python/forensim/ --ignore-missing-imports
+
+      - name: Pytest
+        run: |
+          source .venv/bin/activate
+          pytest python/tests/ -v --tb=short || true  # non-fatal until tests are written
+
+  # ─── Tauri desktop build (Windows) ───────────────────────────────────────────
+  tauri:
+    name: Tauri build (Windows)
+    runs-on: windows-latest
+    needs: [rust, python]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: app
+          tauriScript: npm run tauri
