@@ -40,8 +40,19 @@ dev = [
 ]
 sim = [
     "ovphysx>=0.4",
-    "gsplat",
-    "torch",
+    # CUDA trainer deps — install torch/gsplat separately from the CUDA index:
+    #   uv pip install torch==2.7.1+cu126 torchvision==0.22.1+cu126 \
+    #       --index-url https://download.pytorch.org/whl/cu126
+    # gsplat is JIT-compiled on first use; CUDA_HOME must point to CUDA 12.6 toolkit.
+    "gsplat>=1.5",
+    "torch>=2.7",
+    "torchvision>=0.22",
+    "gaussian-splatting>=2.3",
+    "viser>=1.0",
+    "nerfview>=0.1",
+    "imageio>=2.33",
+    "tyro>=0.8",
+    "tensorboard>=2.14",
 ]
 nerf = [
     "nerfstudio",

@@ -1,19 +1,29 @@
 """
 3D Gaussian Splatting pipeline.
 
-Provides a training entry point that can either delegate to a real
-Gaussian Splatting optimizer (when the heavy dependencies are available)
+Provides a training entry point that can either delegate to the
+``gaussian-splatting`` trainer (when CUDA is compiled and available)
 or fall back to a deterministic point-cloud-to-Gaussian exporter that
-creates a valid `.ply` file from COLMAP sparse points. The fallback is
-default because it does not require a CUDA build of the full reference
-trainer and lets the COLMAP → USD pipeline be verified end-to-end.
+creates a valid ``.ply`` file from COLMAP sparse points.
 
-The fallback uses ``gsplat.export_splats`` to write a standard PLY file.
+Strategy selection (checked in order):
+    1. ``fallback=False`` + CUDA available → runs ``gaussian_splatting.train``
+       with the ``gsplat`` backend.  Requires a compiled gsplat CUDA
+       extension (JIT-compiled on first run when ``CUDA_HOME`` is set).
+    2. ``fallback=True`` (default) → exports Gaussians directly from the
+       COLMAP sparse point cloud via ``gsplat.export_splats``.  No CUDA
+       compilation needed; works on any torch+CUDA build.
+
+The fallback is the default because it does not require nvcc and lets
+the COLMAP → USD pipeline be verified end-to-end immediately.  Switch to
+``fallback=False`` (or set ``FORENSIM_GSPLAT_FALLBACK=0``) once the
+CUDA Toolkit is installed and ``CUDA_HOME`` points to it.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import struct
 from collections.abc import Callable
 from pathlib import Path
@@ -25,6 +35,10 @@ logger = logging.getLogger(__name__)
 
 ProgressCallback = Callable[[str, float, str], None]
 
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def _read_colmap_points3d_bin(path: Path) -> tuple[np.ndarray, np.ndarray]:
     """
@@ -44,21 +58,23 @@ def _read_colmap_points3d_bin(path: Path) -> tuple[np.ndarray, np.ndarray]:
     rgb = np.empty((num_points, 3), dtype=np.uint8)
 
     for i in range(num_points):
-        # point3D_id, xyz, rgb, error, track_length
-        # Format: QdddBBBdQ + (ii)*track_length
+        # Format per point: Q ddd BBB d Q + (ii)*track_length
         offset += 8  # point3D_id
         xyz[i] = struct.unpack_from("<3d", data, offset)
         offset += 24
         rgb[i] = struct.unpack_from("<3B", data, offset)
         offset += 3
-        offset += 8  # error
+        offset += 8  # error (double)
         track_length = struct.unpack_from("<Q", data, offset)[0]
         offset += 8
-        # track entries: image_id (int32), point2D_idx (int32)
-        offset += 8 * track_length
+        offset += 8 * track_length  # track entries: image_id (i32) + point2D_idx (i32)
 
     return xyz, rgb
 
+
+# ---------------------------------------------------------------------------
+# Fallback exporter: COLMAP sparse points → Gaussian PLY
+# ---------------------------------------------------------------------------
 
 def _export_splats_from_points(
     points_path: Path,
@@ -123,6 +139,10 @@ def _export_splats_from_points(
     return output_path
 
 
+# ---------------------------------------------------------------------------
+# Real trainer: gaussian-splatting package with gsplat backend
+# ---------------------------------------------------------------------------
+
 def _try_real_trainer(
     colmap_dir: Path,
     image_dir: Path,
@@ -131,17 +151,112 @@ def _try_real_trainer(
     progress: ProgressCallback | None = None,
 ) -> Path:
     """
-    Attempt to run a real Gaussian Splatting trainer.
+    Run the ``gaussian-splatting`` trainer with the gsplat CUDA backend.
 
-    Currently this is a placeholder that raises ImportError. Once the
-    heavy dependencies (a working reference trainer or a custom gsplat
-    training loop) are available, this function can be swapped in.
+    Requirements
+    ------------
+    * torch built with CUDA (torch.cuda.is_available() == True)
+    * CUDA Toolkit installed and ``CUDA_HOME`` / ``CUDA_PATH`` env var set
+      so that gsplat's JIT compiler can find nvcc.
+    * ``gaussian-splatting`` package installed (already in the venv).
+
+    The PLY is saved to ``output_dir/point_cloud/iteration_{max_steps}/point_cloud.ply``
+    and the canonical path ``output_dir/point_cloud.ply`` is returned.
     """
-    raise ImportError(
-        "Real Gaussian Splatting trainer is not available in this environment. "
-        "Use fallback=True or install the full gsplat example dependencies."
+    if not torch.cuda.is_available():
+        raise ImportError(
+            "CUDA is not available. Install PyTorch with a CUDA build "
+            "(e.g. torch 2.7.1+cu126) to use the real Gaussian Splatting trainer."
+        )
+
+    # Verify nvcc is reachable so we give a clear error before a 30 s JIT attempt.
+    cuda_home = os.environ.get("CUDA_HOME") or os.environ.get("CUDA_PATH")
+    if not cuda_home:
+        raise ImportError(
+            "CUDA_HOME (or CUDA_PATH) is not set. Install CUDA Toolkit 12.6 from "
+            "https://developer.nvidia.com/cuda-12-6-0-download-archive and set the "
+            "environment variable before running the real trainer. "
+            "Alternatively, use fallback=True (default) to export from COLMAP sparse points."
+        )
+
+    try:
+        from gaussian_splatting.train import (  # type: ignore[import-untyped]
+            prepare_training,
+            training,
+        )
+    except ImportError as exc:
+        raise ImportError(
+            f"gaussian-splatting package not available: {exc}. "
+            "Run: uv pip install gaussian-splatting"
+        ) from exc
+
+    # gaussian-splatting expects the COLMAP workspace root (parent of sparse/0).
+    # colmap_dir is sparse/0, so we want the workspace root two levels up.
+    # However the package's ColmapCameraDataset looks for `images/` and `sparse/`
+    # relative to the source path. We use image_dir's parent workspace.
+    workspace_root = colmap_dir.parent.parent  # workspace/sparse/0 → workspace
+    source_path = str(workspace_root)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    if progress:
+        progress("gsplat", 0.0, f"Starting Gaussian Splatting training ({max_steps} iters)…")
+
+    # Use the gsplat backend which leverages our installed gsplat rasterizer.
+    save_iters = [max_steps // 4, max_steps // 2, max_steps]
+    dataset, gaussians, trainer = prepare_training(
+        sh_degree=3,
+        source=source_path,
+        device="cuda",
+        mode="densify",
+        backend="gsplat",
+        load_mask=False,   # no mask images in basic pipeline
+        load_depth=False,  # no depth images in basic pipeline
     )
 
+    def _report(step: int, total: int) -> None:
+        if progress:
+            pct = step / total
+            progress("gsplat", pct, f"Training step {step}/{total}")
+
+    # gaussian-splatting's training() handles its own tqdm bar; we hook after.
+    training(
+        dataset=dataset,
+        gaussians=gaussians,
+        trainer=trainer,
+        destination=str(output_dir),
+        iteration=max_steps,
+        save_iterations=save_iters,
+    )
+
+    if progress:
+        progress("gsplat", 0.95, "Training complete, locating output PLY…")
+
+    # Find the final PLY (highest iteration saved).
+    ply_candidates = sorted(
+        (output_dir / "point_cloud").glob("iteration_*/point_cloud.ply")
+    )
+    if not ply_candidates:
+        raise FileNotFoundError(
+            f"Gaussian Splatting training completed but no PLY found in {output_dir}"
+        )
+
+    final_ply = ply_candidates[-1]
+    # Create a canonical symlink at output_dir/point_cloud.ply for downstream steps.
+    canonical = output_dir / "point_cloud.ply"
+    if not canonical.exists():
+        import shutil
+        shutil.copy2(final_ply, canonical)
+
+    if progress:
+        progress("gsplat", 1.0, f"Gaussian Splatting PLY saved to {canonical}")
+
+    return canonical
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 def train(
     colmap_dir: Path,
@@ -157,12 +272,14 @@ def train(
 
     Args:
         colmap_dir: Path to COLMAP sparse/0 directory (must contain points3D.bin).
-        image_dir: Path to input images (used by real trainers; fallback ignores it).
+        image_dir: Path to input images (used by real trainer; fallback ignores it).
         output_dir: Where to save the trained model.
-        max_steps: Training iterations (only used by real trainers).
-        resolution: Downscale factor (only used by real trainers).
-        fallback: If True, export a Gaussian Splat PLY directly from COLMAP
-                  sparse points instead of running a full training loop.
+        max_steps: Training iterations (only used by real trainer).
+        resolution: Downscale factor (currently unused; real trainer uses full res).
+        fallback: If True (default), export a Gaussian Splat PLY directly from
+                  COLMAP sparse points instead of running a full training loop.
+                  Set to False (or set env var ``FORENSIM_GSPLAT_FALLBACK=0``)
+                  after installing the CUDA Toolkit to use the real trainer.
         progress: Optional callback(step_name, percent, message).
 
     Returns:
@@ -173,6 +290,12 @@ def train(
         raise FileNotFoundError(f"COLMAP points3D.bin not found: {points_path}")
 
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Environment override: FORENSIM_GSPLAT_FALLBACK=0 forces real trainer.
+    env_fallback = os.environ.get("FORENSIM_GSPLAT_FALLBACK")
+    if env_fallback is not None:
+        fallback = env_fallback.strip() not in ("0", "false", "no")
+
     ply_path = output_dir / "point_cloud.ply"
 
     if not fallback:
@@ -185,6 +308,10 @@ def train(
                 progress=progress,
             )
         except ImportError as exc:
-            logger.warning("Real trainer unavailable, switching to fallback: %s", exc)
+            logger.warning(
+                "Real Gaussian Splatting trainer unavailable, switching to fallback: %s", exc
+            )
+        except Exception:
+            logger.exception("Real trainer failed; falling back to point-cloud exporter")
 
     return _export_splats_from_points(points_path, ply_path, progress=progress)

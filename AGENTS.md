@@ -38,12 +38,29 @@ maturin develop --release
 # Extract to a persistent location, e.g. D:\Tools\COLMAP, and add its bin folder to PATH:
 $env:Path = "D:\Tools\COLMAP\bin;$env:Path"
 
-# 6. Install Tauri CLI and frontend deps
+# 6. Install CUDA Toolkit 12.6 (required for real Gaussian Splatting trainer)
+# Download: https://developer.nvidia.com/cuda-12-6-0-download-archive
+#   → Windows → x86_64 → 11 → exe (local)
+# During install choose "Custom" and check: CUDA Toolkit + Development Tools.
+# Uncheck "Display Driver" (yours is already newer).
+# After install, set CUDA_HOME to enable gsplat JIT compilation:
+$env:CUDA_HOME = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6"
+# Add nvcc to PATH permanently via System Properties → Environment Variables.
+
+# 7. Install PyTorch CUDA 12.6 build (replaces the CPU-only version)
+uv pip install torch==2.7.1+cu126 torchvision==0.22.1+cu126 torchaudio==2.7.1+cu126 `
+    --index-url https://download.pytorch.org/whl/cu126
+
+# 8. Install Gaussian Splatting trainer and viewer deps
+uv pip install gaussian-splatting>=2.3 viser>=1.0 nerfview>=0.1 imageio>=2.33 `
+    tyro>=0.8 tensorboard>=2.14
+
+# 9. Install Tauri CLI and frontend deps
 cd app
 npm install
 cd ..
 
-# 7. Install Tauri CLI globally (optional, also available via npm)
+# 10. Install Tauri CLI globally (optional, also available via npm)
 cargo install tauri-cli --version "^2"
 ```
 
@@ -156,6 +173,14 @@ $env:NUREC_ADDRESS = "localhost:8080"
 
 # ForenSim API port (default: 8008)
 $env:FORENSIM_API_PORT = "8008"
+
+# CUDA Toolkit root — required for gsplat JIT compilation
+# Set after installing CUDA Toolkit 12.6:
+$env:CUDA_HOME = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.6"
+
+# Gaussian Splatting trainer mode (default: 1 = use fallback exporter)
+# Set to 0 to force the real gaussian-splatting trainer (requires CUDA_HOME):
+$env:FORENSIM_GSPLAT_FALLBACK = "0"
 ```
 
 ## Dependency Notes
@@ -164,8 +189,12 @@ $env:FORENSIM_API_PORT = "8008"
 - **Isaac Sim 6.x requires Python 3.12** — this project is locked to 3.12
 - **COLMAP must be installed separately** — not available via pip; set `COLMAP_PATH` or add its `bin` folder to PATH
 - **gsplat requires CUDA** — GPU mandatory for Gaussian Splatting training
+  - The fallback exporter (`FORENSIM_GSPLAT_FALLBACK=1`) works with any CUDA torch build (no nvcc needed)
+  - The real trainer (`FORENSIM_GSPLAT_FALLBACK=0`) additionally requires the CUDA Toolkit (nvcc) for JIT compilation
+  - gsplat prebuilt wheels at https://docs.gsplat.studio/whl only cover Python 3.10; for Python 3.12 the JIT path is the only option
 - `omniverse-gsplat-converter` handles PLY → USD conversion without needing a full Omniverse install
 - **nerfstudio is split into a separate `nerf` extra** because it pins protobuf 3.20, which conflicts with modern grpcio-tools
+- **torch must be the CUDA build** — install from `https://download.pytorch.org/whl/cu126`, not from PyPI default
 
 ## Running Tests
 
