@@ -691,11 +691,11 @@ forensim/                          # D:\forensim\ (local) / github.com/forensim/
 - [x] Connect to UI: probability panels, likelihood ratio cards
 
 ### Phase 4 — Advanced Features (Weeks 11-14)
-- [ ] NVIDIA NuRec gRPC client integration
+- [x] NVIDIA NuRec gRPC client integration (health-check, list/load scenes, render frames)
 - [ ] Soft body / fluid simulation for blood spatter analysis
 - [x] Evidence annotation layer (ROI drawing on images)
 - [x] Export: PDF report, USD scene, video flythrough
-- [ ] Sensitivity analysis (which evidence most affects ranking)
+- [x] Sensitivity analysis (LOO re-ranking, per-evidence impact bars)
 - [ ] Omniverse Nucleus integration (optional collaborative mode)
 
 ### Phase 5 — Polish & Portfolio (Weeks 15-16)
