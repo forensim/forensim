@@ -111,6 +111,8 @@ export interface InferRequest {
   physx_log_likelihoods?: number[];
   use_hmm?: boolean;
   emission_matrix?: number[][];
+  annotations?: Annotation[];
+  annotation_strength?: number;
 }
 
 /** Per-hypothesis result from the inference API. */
@@ -129,6 +131,43 @@ export interface InferResponse {
   hypotheses: HypothesisResult[];
   posterior_entropy: number | null;
   map_description: string | null;
+}
+
+// ── Annotation types ──────────────────────────────────────────────────────────
+
+/** Supported annotation ROI shapes. */
+export type AnnotationShape = "rect" | "polygon";
+
+/** A single evidence ROI annotation. */
+export interface Annotation {
+  id: string;
+  image_path: string;
+  shape: AnnotationShape;
+  /** Rectangle: [[x1, y1], [x2, y2]]. Polygon: [[x1, y1], [x2, y2], ...]. */
+  coordinates: [number, number][];
+  tag: string;
+  description?: string;
+  confidence?: number;
+  metadata?: Record<string, unknown>;
+}
+
+/** Request payload to save annotations for a workspace. */
+export interface SaveAnnotationsRequest {
+  workspace_dir: string;
+  annotations: Annotation[];
+}
+
+/** Response returned when annotations are saved. */
+export interface SaveAnnotationsResponse {
+  status: string;
+  saved_path: string;
+  count: number;
+}
+
+/** Response returned when annotations are loaded. */
+export interface LoadAnnotationsResponse {
+  status: string;
+  annotations: Annotation[];
 }
 
 // ── Export / Report types ─────────────────────────────────────────────────────

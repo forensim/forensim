@@ -2,11 +2,14 @@ import type {
   HealthResponse,
   InferRequest,
   InferResponse,
+  LoadAnnotationsResponse,
   ProgressEvent,
   ReconstructRequest,
   ReconstructResponse,
   ReportRequest,
   ReportResponse,
+  SaveAnnotationsRequest,
+  SaveAnnotationsResponse,
   SimulateRequest,
   SimulateResponse,
   UsdExportRequest,
@@ -178,6 +181,47 @@ export class ApiClient {
   }
 
   /**
+   * Save evidence ROI annotations to a workspace sidecar.
+   *
+   * @param req - Save request with workspace directory and annotations.
+   * @returns Path to the saved annotation file and count.
+   */
+  async saveAnnotations(
+    req: SaveAnnotationsRequest
+  ): Promise<SaveAnnotationsResponse> {
+    const response = await fetch(this.url("/api/annotate/save"), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(req),
+    });
+    return this.parseJson<SaveAnnotationsResponse>(response);
+  }
+
+  /**
+   * Load evidence ROI annotations for a workspace.
+   *
+   * @param workspaceDir - Absolute workspace directory.
+   * @returns Saved annotations for the workspace.
+   */
+  async loadAnnotations(
+    workspaceDir: string
+  ): Promise<LoadAnnotationsResponse> {
+    const response = await fetch(
+      this.url(
+        `/api/annotate/load?workspace_dir=${encodeURIComponent(workspaceDir)}`
+      ),
+      {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      }
+    );
+    return this.parseJson<LoadAnnotationsResponse>(response);
+  }
+
+  /**
    * Generate a PDF forensic report from case metadata and pipeline results.
    *
    * @param req - Report request with case title, examiner notes, and optional results.
@@ -238,9 +282,12 @@ export class ApiClient {
    * @returns The file as a Blob.
    */
   async downloadFile(path: string): Promise<Blob> {
-    const response = await fetch(this.url(`/api/export/download?path=${encodeURIComponent(path)}`), {
-      method: "GET",
-    });
+    const response = await fetch(
+      this.url(`/api/export/download?path=${encodeURIComponent(path)}`),
+      {
+        method: "GET",
+      }
+    );
     if (!response.ok) {
       const body = await response.text().catch(() => "");
       throw new Error(

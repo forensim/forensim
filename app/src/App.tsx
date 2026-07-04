@@ -7,9 +7,10 @@ import SplatViewer from "./components/SplatViewer";
 import ScenarioPanel from "./components/ScenarioPanel";
 import InferencePanel from "./components/InferencePanel";
 import ExportPanel from "./components/ExportPanel";
-import type { InferResponse, ReconstructResponse, SimulateResponse, TrajectoryData, SimRunResult } from "./api/types";
+import AnnotationPanel from "./components/AnnotationPanel";
+import type { Annotation, InferResponse, ReconstructResponse, SimulateResponse, TrajectoryData, SimRunResult } from "./api/types";
 
-type Tab = "evidence" | "reconstruct" | "view" | "simulate" | "infer" | "export";
+type Tab = "evidence" | "annotate" | "reconstruct" | "view" | "simulate" | "infer" | "export";
 
 function TabButton({
   label,
@@ -55,6 +56,10 @@ export default function App() {
     workspaceDir: string;
   } | null>(null);
 
+  // Evidence images and annotations
+  const [imagePaths, setImagePaths] = useState<string[]>([]);
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+
   // Reconstruction result
   const [result, setResult] = useState<ReconstructResponse | null>(null);
 
@@ -74,6 +79,14 @@ export default function App() {
     },
     []
   );
+
+  const handleImagesChange = useCallback((images: string[]) => {
+    setImagePaths(images);
+  }, []);
+
+  const handleAnnotationsChange = useCallback((anns: Annotation[]) => {
+    setAnnotations(anns);
+  }, []);
 
   const handleResult = useCallback((res: ReconstructResponse) => {
     setResult(res);
@@ -134,6 +147,13 @@ export default function App() {
           badge={selection ? "✓" : undefined}
         />
         <TabButton
+          label="Annotate"
+          active={tab === "annotate"}
+          disabled={!selection}
+          onClick={() => setTab("annotate")}
+          badge={imagePaths.length > 0 ? `${annotations.length}A` : undefined}
+        />
+        <TabButton
           label="Reconstruct"
           active={tab === "reconstruct"}
           disabled={!selection}
@@ -178,7 +198,10 @@ export default function App() {
                   reconstruction results.
                 </p>
               </div>
-              <EvidencePicker onSelectionChange={handleSelectionChange} />
+              <EvidencePicker
+                onSelectionChange={handleSelectionChange}
+                onImagesChange={handleImagesChange}
+              />
               {selection && (
                 <div className="flex justify-end">
                   <button
@@ -191,6 +214,26 @@ export default function App() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Annotate tab ──────────────────────────────────────── */}
+        {tab === "annotate" && selection && (
+          <div className="flex-1 flex flex-col p-5 min-h-0">
+            <div className="max-w-6xl mx-auto w-full flex flex-col flex-1 min-h-0 gap-4">
+              <div>
+                <h2 className="text-base font-semibold text-zinc-100">Evidence Annotation</h2>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Draw regions of interest on evidence images and tag them. Annotations are
+                  automatically fed into the inference pipeline as weighted evidence.
+                </p>
+              </div>
+              <AnnotationPanel
+                imagePaths={imagePaths}
+                workspaceDir={selection.workspaceDir}
+                onAnnotationsChange={handleAnnotationsChange}
+              />
             </div>
           </div>
         )}
@@ -317,6 +360,7 @@ export default function App() {
               )}
               <InferencePanel
                 simulationLogLikelihoods={simLogLikelihoods}
+                annotations={annotations}
                 onResult={handleInferenceResult}
               />
             </div>

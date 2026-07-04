@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import type { Annotation as AnnotationType } from "../api/types";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -35,12 +36,16 @@ interface InferRequest {
   initial_probs: number[];
   event_vocab: string[];
   physx_log_likelihoods: number[];
+  annotations?: AnnotationType[];
+  annotation_strength?: number;
 }
 
 export interface InferencePanelProps {
   /** Optional physx log-likelihoods from simulation (parallel to hypotheses list).
    *  If provided, pre-fills the physxLogLikelihood field for each hypothesis. */
   simulationLogLikelihoods?: number[];
+  /** Optional evidence ROI annotations that adjust hypothesis likelihoods. */
+  annotations?: AnnotationType[];
   /** Called when inference results are received from the backend. */
   onResult?: (result: InferResponse) => void;
 }
@@ -506,6 +511,7 @@ function ResultCard({ result, rank1LogProb }: ResultCardProps) {
 
 export default function InferencePanel({
   simulationLogLikelihoods,
+  annotations,
   onResult,
 }: InferencePanelProps) {
   // Merge simulationLogLikelihoods into the default hypotheses at mount-time.
@@ -596,6 +602,8 @@ export default function InferencePanel({
       initial_probs: initialProbs,
       event_vocab: vocab,
       physx_log_likelihoods: hypotheses.map((h) => h.physxLogLikelihood),
+      annotations: annotations as AnnotationType[],
+      annotation_strength: 1.0,
     };
 
     try {

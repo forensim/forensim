@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -11,6 +12,17 @@ router = APIRouter()
 
 
 # ── Pydantic models ───────────────────────────────────────────────────────────
+
+class AnnotationModel(BaseModel):
+    id: str
+    image_path: str
+    shape: str
+    coordinates: list[list[float]]
+    tag: str
+    description: str = ""
+    confidence: float = 1.0
+    metadata: dict[str, Any] = {}
+
 
 class InferRequest(BaseModel):
     sequences: list[list[str]]
@@ -23,6 +35,10 @@ class InferRequest(BaseModel):
     """If True, use HMM forward log-likelihood instead of Markov chain."""
     emission_matrix: list[list[float]] | None = None
     """Required when use_hmm=True. Shape: [n_states × len(event_vocab)]."""
+    annotations: list[AnnotationModel] | None = None
+    """Optional evidence ROI annotations that adjust hypothesis likelihoods."""
+    annotation_strength: float = 1.0
+    """Scaling factor for annotation likelihood effect."""
 
 
 class HypothesisResult(BaseModel):
@@ -66,11 +82,13 @@ async def rank_hypotheses(req: InferRequest) -> InferResponse:
         )
 
     try:
+        from forensim.annotate.manager import Annotation, Shape
         from forensim.infer.sequence import (
+            compute_posterior_entropy,
+            integrate_annotation_scores,
             integrate_physx_scores,
             rank_event_sequences,
             rank_event_sequences_hmm,
-            compute_posterior_entropy,
         )
 
         loop = asyncio.get_event_loop()
@@ -113,6 +131,28 @@ async def rank_hypotheses(req: InferRequest) -> InferResponse:
                 req.physx_log_likelihoods,
             )
 
+        if req.annotations:
+            annotations = [
+                Annotation(
+                    id=a.id,
+                    image_path=a.image_path,
+                    shape=Shape(a.shape),
+                    coordinates=a.coordinates,
+                    tag=a.tag,
+                    description=a.description,
+                    confidence=a.confidence,
+                    metadata=a.metadata,
+                )
+                for a in req.annotations
+            ]
+            hypotheses = await loop.run_in_executor(
+                None,
+                integrate_annotation_scores,
+                hypotheses,
+                annotations,
+                req.annotation_strength,
+            )
+
         posteriors = [h.posterior for h in hypotheses]
         entropy = compute_posterior_entropy(posteriors)
         map_hyp = hypotheses[0] if hypotheses else None
@@ -130,9 +170,9 @@ async def rank_hypotheses(req: InferRequest) -> InferResponse:
                     events=h.events,
                     bayes_factor=(
                         round(h.bayes_factor, 6)
-                        if h.bayes_factor is not None and h.bayes_factor == h.bayes_factor  # NaN check
+                        if h.bayes_factor is not None and h.bayes_factor == h.bayes_factor
                         else None
-                    ),
+                    ),  # NaN check
                 )
                 for i, h in enumerate(hypotheses)
             ],

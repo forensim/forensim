@@ -4,13 +4,14 @@ import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 
 interface EvidencePickerProps {
   onSelectionChange: (selection: { imageDir: string; workspaceDir: string } | null) => void;
+  onImagesChange?: (images: string[]) => void;
 }
 
 const isTauri = () => {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 };
 
-export default function EvidencePicker({ onSelectionChange }: EvidencePickerProps) {
+export default function EvidencePicker({ onSelectionChange, onImagesChange }: EvidencePickerProps) {
   const [imageDir, setImageDir] = useState("");
   const [workspaceDir, setWorkspaceDir] = useState("");
   const [images, setImages] = useState<string[]>([]);
@@ -54,11 +55,18 @@ export default function EvidencePicker({ onSelectionChange }: EvidencePickerProp
     setLoading(true);
     invoke<string[]>("list_images", { dir: imageDir })
       .then((paths) => {
-        if (!cancelled) setImages(paths ?? []);
+        const imgs = paths ?? [];
+        if (!cancelled) {
+          setImages(imgs);
+          onImagesChange?.(imgs);
+        }
       })
       .catch((err) => {
         console.error("Failed to list images:", err);
-        if (!cancelled) setImages([]);
+        if (!cancelled) {
+          setImages([]);
+          onImagesChange?.([]);
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -72,7 +80,8 @@ export default function EvidencePicker({ onSelectionChange }: EvidencePickerProp
     setImageDir("");
     setWorkspaceDir("");
     setImages([]);
-  }, []);
+    onImagesChange?.([]);
+  }, [onImagesChange]);
 
   return (
     <div className="bg-gray-900 text-gray-100 rounded-lg p-6 shadow-lg border border-gray-800">

@@ -693,7 +693,7 @@ forensim/                          # D:\forensim\ (local) / github.com/forensim/
 ### Phase 4 — Advanced Features (Weeks 11-14)
 - [ ] NVIDIA NuRec gRPC client integration
 - [ ] Soft body / fluid simulation for blood spatter analysis
-- [ ] Evidence annotation layer (ROI drawing on images)
+- [x] Evidence annotation layer (ROI drawing on images)
 - [x] Export: PDF report, USD scene, video flythrough
 - [ ] Sensitivity analysis (which evidence most affects ranking)
 - [ ] Omniverse Nucleus integration (optional collaborative mode)

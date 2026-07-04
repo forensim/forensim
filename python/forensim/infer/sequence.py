@@ -14,6 +14,9 @@ from typing import Any
 
 import numpy as np
 
+from forensim.annotate.manager import Annotation
+from forensim.annotate.weights import apply_annotation_likelihoods
+
 
 @dataclass
 class ScoredHypothesis:
@@ -195,6 +198,35 @@ def bayesian_update(
         h.entropy = entropy
 
     hypotheses.sort(key=lambda h: h.posterior, reverse=True)
+    _annotate_bayes_factors(hypotheses)
+    return hypotheses
+
+
+def integrate_annotation_scores(
+    hypotheses: list[ScoredHypothesis],
+    annotations: list[Annotation],
+    strength: float = 1.0,
+) -> list[ScoredHypothesis]:
+    """Update hypothesis scores by integrating evidence annotation likelihoods.
+
+    Args:
+        hypotheses: Previously scored hypotheses.
+        annotations: Evidence ROI annotations with forensic tags.
+        strength: Scaling factor for the annotation likelihood effect.
+
+    Returns:
+        Updated and re-ranked hypotheses.
+    """
+    if not annotations:
+        return hypotheses
+
+    log_likelihoods = apply_annotation_likelihoods(hypotheses, annotations, strength)
+    combined = np.array([h.log_probability for h in hypotheses]) + np.array(log_likelihoods)
+    for h, lp in zip(hypotheses, combined):
+        h.log_probability = float(lp)
+
+    hypotheses = _normalise_posteriors(hypotheses)
+    hypotheses.sort(key=lambda h: h.log_probability, reverse=True)
     _annotate_bayes_factors(hypotheses)
     return hypotheses
 
