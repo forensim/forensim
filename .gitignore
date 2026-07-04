@@ -46,6 +46,17 @@ python/tests/fixtures/fountain.zip
 Thumbs.db
 desktop.ini
 
+# Local artifacts / logs
+.vs/
+*.log
+out.txt
+ovphysx_api.txt
+torch_install.log
+cargo_check.log
+npm_install.log
+gsplat_compile*.log
+
 # Secrets
 .env
 .env.*
+
