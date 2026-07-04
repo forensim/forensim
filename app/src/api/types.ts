@@ -98,3 +98,35 @@ export interface TrajectoryData {
   color: string;
   points: [number, number, number][];
 }
+
+// ── Inference types ───────────────────────────────────────────────────────────
+
+/** Request payload to rank forensic event hypotheses. */
+export interface InferRequest {
+  sequences: string[][];
+  descriptions: string[];
+  transition_matrix: number[][];
+  initial_probs: number[];
+  event_vocab: string[];
+  physx_log_likelihoods?: number[];
+  use_hmm?: boolean;
+  emission_matrix?: number[][];
+}
+
+/** Per-hypothesis result from the inference API. */
+export interface HypothesisResult {
+  rank: number;
+  description: string;
+  log_probability: number;
+  posterior: number;
+  events: string[];
+  bayes_factor: number | null;
+}
+
+/** Top-level inference response. */
+export interface InferResponse {
+  status: string;
+  hypotheses: HypothesisResult[];
+  posterior_entropy: number | null;
+  map_description: string | null;
+}

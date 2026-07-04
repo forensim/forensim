@@ -1,5 +1,7 @@
 import type {
   HealthResponse,
+  InferRequest,
+  InferResponse,
   ProgressEvent,
   ReconstructRequest,
   ReconstructResponse,
@@ -157,6 +159,24 @@ export class ApiClient {
    * @returns `true` if the health endpoint responds, otherwise `false`.
    * Does not throw.
    */
+  /**
+   * Run probabilistic hypothesis ranking via the Bayesian inference engine.
+   *
+   * @param req - Inference request with sequences, vocab, transition matrix, and optional PhysX scores.
+   * @returns Ranked hypotheses with posteriors, Bayes factors, and entropy.
+   */
+  async runInference(req: InferRequest): Promise<InferResponse> {
+    const response = await fetch(this.url("/api/infer/rank"), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(req),
+    });
+    return this.parseJson<InferResponse>(response);
+  }
+
   async checkApiAvailable(): Promise<boolean> {
     try {
       await this.health();

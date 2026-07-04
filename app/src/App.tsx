@@ -5,9 +5,10 @@ import ReconstructionPanel from "./components/ReconstructionPanel";
 import ResultPanel from "./components/ResultPanel";
 import SplatViewer from "./components/SplatViewer";
 import ScenarioPanel from "./components/ScenarioPanel";
+import InferencePanel from "./components/InferencePanel";
 import type { ReconstructResponse, TrajectoryData, SimRunResult } from "./api/types";
 
-type Tab = "evidence" | "reconstruct" | "view" | "simulate";
+type Tab = "evidence" | "reconstruct" | "view" | "simulate" | "infer";
 
 function TabButton({
   label,
@@ -59,6 +60,9 @@ export default function App() {
   // Simulation trajectories to overlay on the splat viewer
   const [trajectories, setTrajectories] = useState<TrajectoryData[]>([]);
 
+  // PhysX log-likelihoods from simulation — passed to InferencePanel
+  const [simLogLikelihoods, setSimLogLikelihoods] = useState<number[]>([]);
+
   const handleSelectionChange = useCallback(
     (sel: { imageDir: string; workspaceDir: string } | null) => {
       setSelection(sel);
@@ -72,8 +76,14 @@ export default function App() {
   }, []);
 
   const handleSimResults = useCallback(
-    (_results: SimRunResult[], newTrajectories: TrajectoryData[]) => {
+    (results: SimRunResult[], newTrajectories: TrajectoryData[]) => {
       setTrajectories(newTrajectories);
+      // Derive per-scenario log-likelihoods from trajectory lengths as a proxy
+      // (trajectory_length = 0 → effectively -inf; longer → better evidence of motion)
+      const logLikelihoods = results.map((r) =>
+        r.trajectory_length > 0 ? -1.0 / Math.max(r.trajectory_length, 1) : -10.0
+      );
+      setSimLogLikelihoods(logLikelihoods);
       // Switch to 3D view to show overlaid trajectories
       setTab("view");
     },
@@ -131,6 +141,12 @@ export default function App() {
           active={tab === "simulate"}
           disabled={!hasResult}
           onClick={() => setTab("simulate")}
+        />
+        <TabButton
+          label="Infer"
+          active={tab === "infer"}
+          onClick={() => setTab("infer")}
+          badge={simLogLikelihoods.length > 0 ? `${simLogLikelihoods.length}H` : undefined}
         />
       </nav>
 
@@ -262,6 +278,33 @@ export default function App() {
           </div>
         )}
       </main>
+
+        {/* ── Infer tab ─────────────────────────────────────────── */}
+        {tab === "infer" && (
+          <div className="flex-1 overflow-y-auto p-5">
+            <div className="max-w-3xl mx-auto space-y-4">
+              <div>
+                <h2 className="text-base font-semibold text-zinc-100">
+                  Probabilistic Inference
+                </h2>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Define forensic hypotheses and rank them by Bayesian posterior
+                  probability. PhysX simulation scores are pre-loaded when available.
+                </p>
+              </div>
+              {simLogLikelihoods.length > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded
+                                bg-amber-500/10 border border-amber-500/30 text-xs text-amber-400">
+                  <span className="font-semibold">PhysX scores loaded:</span>
+                  <span className="font-mono">
+                    {simLogLikelihoods.map((l) => l.toFixed(3)).join(", ")}
+                  </span>
+                </div>
+              )}
+              <InferencePanel simulationLogLikelihoods={simLogLikelihoods} />
+            </div>
+          </div>
+        )}
 
       {/* ── Footer ──────────────────────────────────────────────── */}
       <footer className="shrink-0 px-5 py-2 border-t border-zinc-800 bg-zinc-950
