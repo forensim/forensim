@@ -202,7 +202,7 @@ export default function App() {
       <main className="flex-1 overflow-hidden flex flex-col">
         {/* ── Evidence tab ──────────────────────────────────────── */}
         {tab === "evidence" && (
-          <div className="flex-1 overflow-y-auto p-5">
+          <div className="flex-1 overflow-y-auto p-5 animate-fade-up">
             <div className="max-w-4xl mx-auto space-y-4">
               <div>
                 <h2 className="text-base font-semibold text-zinc-100">Load Evidence</h2>
@@ -253,7 +253,7 @@ export default function App() {
 
         {/* ── Reconstruct tab ───────────────────────────────────── */}
         {tab === "reconstruct" && selection && (
-          <div className="flex-1 overflow-y-auto p-5">
+          <div className="flex-1 overflow-y-auto p-5 animate-fade-up">
             <div className="max-w-2xl mx-auto space-y-4">
               <div>
                 <h2 className="text-base font-semibold text-zinc-100">Reconstruction</h2>
@@ -329,7 +329,7 @@ export default function App() {
 
         {/* ── Simulate tab ──────────────────────────────────────── */}
         {tab === "simulate" && (
-          <div className="flex-1 overflow-y-auto p-5">
+          <div className="flex-1 overflow-y-auto p-5 animate-fade-up">
             <div className="max-w-2xl mx-auto space-y-4">
               <div>
                 <h2 className="text-base font-semibold text-zinc-100">Physics Simulation</h2>
@@ -351,7 +351,7 @@ export default function App() {
 
         {/* ── Infer tab ─────────────────────────────────────────── */}
         {tab === "infer" && (
-          <div className="flex-1 overflow-y-auto p-5">
+          <div className="flex-1 overflow-y-auto p-5 animate-fade-up">
             <div className="max-w-3xl mx-auto space-y-4">
               <div>
                 <h2 className="text-base font-semibold text-zinc-100">
@@ -382,7 +382,7 @@ export default function App() {
 
         {/* ── Sensitivity tab ─────────────────────────────────────── */}
         {tab === "sensitivity" && (
-          <div className="flex-1 overflow-y-auto p-5">
+          <div className="flex-1 overflow-y-auto p-5 animate-fade-up">
             <div className="max-w-3xl mx-auto space-y-4">
               <div>
                 <h2 className="text-base font-semibold text-zinc-100">
@@ -403,7 +403,7 @@ export default function App() {
 
         {/* ── NuRec tab ───────────────────────────────────────────── */}
         {tab === "nurec" && (
-          <div className="flex-1 overflow-y-auto p-5">
+          <div className="flex-1 overflow-y-auto p-5 animate-fade-up">
             <div className="max-w-3xl mx-auto space-y-4">
               <div>
                 <h2 className="text-base font-semibold text-zinc-100">
@@ -422,7 +422,7 @@ export default function App() {
 
         {/* ── Export tab ─────────────────────────────────────────── */}
         {tab === "export" && (
-          <div className="flex-1 overflow-y-auto p-5">
+          <div className="flex-1 overflow-y-auto p-5 animate-fade-up">
             <div className="max-w-3xl mx-auto space-y-4">
               <div>
                 <h2 className="text-base font-semibold text-zinc-100">Export & Report</h2>

@@ -1,0 +1,75 @@
+{
+  "annotations": [
+    {
+      "id": "ann-ev1",
+      "image_path": "img_001.jpg",
+      "shape": "rect",
+      "coordinates": [
+        [
+          120,
+          180
+        ],
+        [
+          200,
+          260
+        ]
+      ],
+      "tag": "blood_spatter",
+      "description": "Simulated blood spatter pattern, EV-1",
+      "confidence": 0.9,
+      "metadata": {
+        "marker_id": "EV-1"
+      }
+    },
+    {
+      "id": "ann-ev2",
+      "image_path": "img_003.jpg",
+      "shape": "rect",
+      "coordinates": [
+        [
+          310,
+          300
+        ],
+        [
+          360,
+          350
+        ]
+      ],
+      "tag": "shell_casing",
+      "description": "Brass shell casing on floor, EV-2",
+      "confidence": 0.95,
+      "metadata": {
+        "marker_id": "EV-2"
+      }
+    },
+    {
+      "id": "ann-ev3",
+      "image_path": "img_005.jpg",
+      "shape": "polygon",
+      "coordinates": [
+        [
+          400,
+          120
+        ],
+        [
+          450,
+          130
+        ],
+        [
+          445,
+          165
+        ],
+        [
+          395,
+          155
+        ]
+      ],
+      "tag": "impact_mark",
+      "description": "Projectile impact mark on wall, EV-3",
+      "confidence": 0.85,
+      "metadata": {
+        "marker_id": "EV-3"
+      }
+    }
+  ]
+}

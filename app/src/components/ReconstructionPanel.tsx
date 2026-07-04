@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { apiClient } from "../api/client";
 import type { ReconstructResponse, ProgressEvent } from "../api/types";
+import { ProgressBar } from "./ui/ProgressBar";
 
 interface ReconstructionPanelProps {
   imageDir: string;
@@ -183,18 +184,17 @@ export default function ReconstructionPanel({
 
       {/* Progress bar */}
       {progress && (
-        <div className="space-y-1">
-          <div className="flex justify-between text-xs text-zinc-500">
-            <span>{progress.step}</span>
-            <span>{progress.percent}%</span>
+        <div className="space-y-2 animate-fade-up">
+          <div className="flex justify-between text-xs">
+            <span className="text-zinc-400 font-mono">{progress.step}</span>
+            <span className="text-zinc-500 font-mono tabular-nums">{progress.percent}%</span>
           </div>
-          <div className="w-full bg-zinc-800 rounded-full h-2">
-            <div
-              className="bg-amber-500 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progress.percent}%` }}
-            />
-          </div>
-          <p className="text-xs text-zinc-400">{progress.message}</p>
+          <ProgressBar
+            value={progress.percent}
+            variant={progress.percent === 100 ? "success" : "amber"}
+            height="h-2"
+          />
+          <p className="text-xs text-zinc-500 italic">{progress.message}</p>
         </div>
       )}
 
@@ -238,22 +238,33 @@ export default function ReconstructionPanel({
 
       {/* Log console */}
       {log.length > 0 && (
-        <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-3 max-h-48 overflow-y-auto font-mono text-xs">
-          {log.map((line, i) => (
-            <div
-              key={i}
-              className={
-                line.startsWith("[error]")
-                  ? "text-red-400"
-                  : line.startsWith("[cancelled]")
-                  ? "text-amber-400"
-                  : "text-zinc-400"
-              }
-            >
-              {line}
-            </div>
-          ))}
-          <div ref={logEndRef} />
+        <div className="bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-1.5 border-b border-zinc-800 bg-zinc-900/50">
+            <span className="text-[10px] font-mono text-zinc-600 uppercase tracking-widest">
+              Pipeline Log
+            </span>
+            <span className="text-[10px] font-mono text-zinc-700">{log.length} lines</span>
+          </div>
+          <div className="p-3 max-h-44 overflow-y-auto font-mono text-xs space-y-0.5">
+            {log.map((line, i) => (
+              <div
+                key={i}
+                className={
+                  line.startsWith("[error]")
+                    ? "text-red-400"
+                    : line.startsWith("[cancelled]")
+                    ? "text-amber-400"
+                    : line.startsWith("Done")
+                    ? "text-emerald-400"
+                    : "text-zinc-500"
+                }
+              >
+                <span className="text-zinc-700 select-none mr-2">{String(i + 1).padStart(3, " ")}</span>
+                {line}
+              </div>
+            ))}
+            <div ref={logEndRef} />
+          </div>
         </div>
       )}
 

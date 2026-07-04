@@ -1,22 +1,74 @@
 import { useState, useEffect, useCallback } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import { Skeleton } from "./ui/Skeleton";
+import { Badge } from "./ui/Badge";
 
 interface EvidencePickerProps {
   onSelectionChange: (selection: { imageDir: string; workspaceDir: string } | null) => void;
   onImagesChange?: (images: string[]) => void;
 }
 
-const isTauri = () => {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-};
+const isTauri = () =>
+  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
-export default function EvidencePicker({ onSelectionChange, onImagesChange }: EvidencePickerProps) {
+function FolderInput({
+  id,
+  label,
+  value,
+  placeholder,
+  onBrowse,
+  onChange,
+  tauriAvailable,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  placeholder: string;
+  onBrowse: () => void;
+  onChange: (v: string) => void;
+  tauriAvailable: boolean;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="block text-xs font-medium text-zinc-500 uppercase tracking-widest">
+        {label}
+      </label>
+      <div className="flex gap-2">
+        <input
+          id={id}
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.currentTarget.value)}
+          placeholder={placeholder}
+          className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2
+                     text-sm font-mono text-zinc-300 placeholder-zinc-700
+                     focus:outline-none focus:border-amber-500 transition-colors"
+        />
+        <button
+          type="button"
+          onClick={onBrowse}
+          disabled={!tauriAvailable}
+          className="px-3 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700
+                     disabled:opacity-40 disabled:cursor-not-allowed
+                     text-zinc-300 text-sm font-medium transition-colors border border-zinc-700"
+        >
+          Browse
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function EvidencePicker({
+  onSelectionChange,
+  onImagesChange,
+}: EvidencePickerProps) {
   const [imageDir, setImageDir] = useState("");
   const [workspaceDir, setWorkspaceDir] = useState("");
   const [images, setImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [tauriAvailable] = useState(isTauri());
+  const [tauriAvailable] = useState(isTauri);
 
   const browseImageDir = useCallback(async () => {
     if (!tauriAvailable) return;
@@ -74,7 +126,7 @@ export default function EvidencePicker({ onSelectionChange, onImagesChange }: Ev
     return () => {
       cancelled = true;
     };
-  }, [imageDir, tauriAvailable]);
+  }, [imageDir, tauriAvailable, onImagesChange]);
 
   const clear = useCallback(() => {
     setImageDir("");
@@ -84,104 +136,119 @@ export default function EvidencePicker({ onSelectionChange, onImagesChange }: Ev
   }, [onImagesChange]);
 
   return (
-    <div className="bg-gray-900 text-gray-100 rounded-lg p-6 shadow-lg border border-gray-800">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-amber-500 font-mono">Evidence Workspace</h2>
-        <button
-          type="button"
-          onClick={clear}
-          className="px-3 py-1 text-sm rounded bg-gray-800 hover:bg-gray-700 text-amber-500 border border-gray-700 transition"
-        >
-          Clear
-        </button>
+    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-5 animate-fade-up">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-semibold text-zinc-100">Evidence Workspace</h2>
+          <p className="text-[11px] text-zinc-600 mt-0.5">
+            Select a folder of crime scene photographs and an output workspace.
+          </p>
+        </div>
+        {(imageDir || workspaceDir) && (
+          <button
+            type="button"
+            onClick={clear}
+            className="px-2.5 py-1 text-xs rounded-md bg-zinc-800 hover:bg-zinc-700
+                       text-zinc-400 hover:text-zinc-200 border border-zinc-700 transition-colors"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       {!tauriAvailable && (
-        <div className="mb-4 p-3 rounded bg-gray-800 border border-amber-500/30 text-amber-500 text-sm">
-          Tauri not available. Folder browsing and image listing are disabled.
+        <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/25 text-xs text-amber-400">
+          <span className="mt-0.5 shrink-0">⚠</span>
+          <span>
+            Running in browser mode — folder browsing is disabled.
+            Type paths manually or launch via{" "}
+            <code className="font-mono bg-amber-500/10 px-1 rounded">npm run tauri dev</code>.
+          </span>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="space-y-2">
-          <label htmlFor="evidence-dir" className="block text-sm font-medium text-gray-400">
-            Evidence Folder
-          </label>
-          <div className="flex gap-2">
-            <input
-              id="evidence-dir"
-              type="text"
-              value={imageDir}
-              onChange={(e) => setImageDir(e.currentTarget.value)}
-              placeholder="Path to evidence images"
-              className="flex-1 bg-gray-950 border border-gray-800 rounded px-3 py-2 text-sm font-mono text-gray-200 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-            />
-            <button
-              type="button"
-              onClick={browseImageDir}
-              disabled={!tauriAvailable}
-              className="px-3 py-2 rounded bg-amber-500 hover:bg-amber-600 disabled:bg-gray-800 disabled:text-gray-500 text-gray-950 font-medium text-sm transition"
-            >
-              Browse
-            </button>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="workspace-dir" className="block text-sm font-medium text-gray-400">
-            Workspace
-          </label>
-          <div className="flex gap-2">
-            <input
-              id="workspace-dir"
-              type="text"
-              value={workspaceDir}
-              onChange={(e) => setWorkspaceDir(e.currentTarget.value)}
-              placeholder="Output directory"
-              className="flex-1 bg-gray-950 border border-gray-800 rounded px-3 py-2 text-sm font-mono text-gray-200 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-            />
-            <button
-              type="button"
-              onClick={browseWorkspaceDir}
-              disabled={!tauriAvailable}
-              className="px-3 py-2 rounded bg-amber-500 hover:bg-amber-600 disabled:bg-gray-800 disabled:text-gray-500 text-gray-950 font-medium text-sm transition"
-            >
-              Browse
-            </button>
-          </div>
-        </div>
+      {/* Folder inputs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FolderInput
+          id="evidence-dir"
+          label="Evidence Folder"
+          value={imageDir}
+          placeholder="D:\evidence\photos"
+          onBrowse={browseImageDir}
+          onChange={setImageDir}
+          tauriAvailable={tauriAvailable}
+        />
+        <FolderInput
+          id="workspace-dir"
+          label="Workspace Output"
+          value={workspaceDir}
+          placeholder="D:\forensim\workspace"
+          onBrowse={browseWorkspaceDir}
+          onChange={setWorkspaceDir}
+          tauriAvailable={tauriAvailable}
+        />
       </div>
 
+      {/* Validation status */}
+      {(imageDir || workspaceDir) && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <Badge variant={imageDir ? "success" : "neutral"}>
+            {imageDir ? "✓ Images" : "⊘ Images"}
+          </Badge>
+          <Badge variant={workspaceDir ? "success" : "neutral"}>
+            {workspaceDir ? "✓ Workspace" : "⊘ Workspace"}
+          </Badge>
+          {imageDir && workspaceDir && (
+            <Badge variant="amber">Ready to reconstruct</Badge>
+          )}
+        </div>
+      )}
+
+      {/* Image grid preview */}
       {imageDir && (
-        <div className="relative">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-400">Preview</h3>
-            <span className="px-2 py-0.5 rounded-full bg-gray-800 text-amber-500 text-xs font-mono">
-              {images.length} image{images.length !== 1 ? "s" : ""}
-            </span>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 justify-between">
+            <span className="text-xs text-zinc-500 font-medium">Preview</span>
+            {!loading && (
+              <Badge variant={images.length > 0 ? "amber" : "neutral"}>
+                {images.length} image{images.length !== 1 ? "s" : ""}
+              </Badge>
+            )}
           </div>
+
           {loading ? (
-            <div className="flex items-center justify-center h-32 text-gray-500 text-sm">
-              Scanning for images...
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="aspect-square rounded-lg" />
+              ))}
             </div>
           ) : images.length === 0 ? (
-            <div className="flex items-center justify-center h-32 text-gray-600 text-sm">
-              No valid images found in selected folder.
+            <div className="flex items-center justify-center h-24 rounded-lg
+                            bg-zinc-950 border border-zinc-800 border-dashed">
+              <p className="text-xs text-zinc-700">No images found in this folder.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-96 overflow-y-auto p-1">
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2 max-h-72 overflow-y-auto">
               {images.map((path) => (
                 <div
                   key={path}
-                  className="relative aspect-square bg-gray-950 rounded overflow-hidden border border-gray-800"
                   title={path}
+                  className="relative aspect-square bg-zinc-950 rounded-lg overflow-hidden
+                             border border-zinc-800 hover:border-amber-500/50 transition-colors group"
                 >
                   <img
                     src={convertFileSrc(path)}
-                    alt={path}
-                    className="w-full h-full object-cover"
+                    alt={path.split(/[/\\]/).pop()}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                     loading="lazy"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/60 to-transparent
+                                  opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end p-1">
+                    <span className="text-[9px] font-mono text-zinc-300 truncate w-full leading-tight">
+                      {path.split(/[/\\]/).pop()}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>

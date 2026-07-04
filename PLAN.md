@@ -699,11 +699,14 @@ forensim/                          # D:\forensim\ (local) / github.com/forensim/
 - [ ] Omniverse Nucleus integration (optional collaborative mode)
 
 ### Phase 5 — Polish & Portfolio (Weeks 15-16)
-- [ ] Full dark theme polish
-- [ ] Sample dataset: public domain crime scene photos
-- [ ] Documentation site
-- [ ] Demo video
-- [ ] README with badges, screenshots, architecture diagram
+- [x] Full dark theme polish (skeleton loaders, focus rings, progress bars, fade-up transitions, scrollbars)
+- [x] Sample dataset: synthetic crime scene (8 images, 3 evidence markers, pre-made annotations)
+- [x] Documentation site (architecture.md, reconstruction-guide.md, probability-model.md)
+- [x] Demo script: `scripts/run_demo.py` (full pipeline demo on sample data)
+- [x] Dev setup script: `scripts/setup-dev.ps1`
+- [x] README rewrite with badges, architecture diagram, feature list, quick start
+- [x] CI: python-checks, rust-checks, frontend-checks (GitHub Actions)
+- [ ] Demo video (screen recording — manual step)
 
 ---
 

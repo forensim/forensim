@@ -1,4 +1,5 @@
 import type { ReconstructResponse } from "../api/types";
+import { Badge } from "./ui/Badge";
 
 interface ResultPanelProps {
   result: ReconstructResponse;
@@ -37,22 +38,27 @@ export default function ResultPanel({ result }: ResultPanelProps) {
   const isSuccess = result.status === "success";
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 animate-fade-up">
       {/* Status banner */}
       <div
         className={`flex items-center gap-3 px-4 py-3 rounded-lg border ${
           isSuccess
-            ? "bg-green-950 border-green-800 text-green-400"
-            : "bg-red-950 border-red-800 text-red-400"
+            ? "bg-emerald-950/60 border-emerald-800/60 text-emerald-400"
+            : "bg-red-950/60 border-red-800/60 text-red-400"
         }`}
       >
-        <span className="text-lg">{isSuccess ? "✓" : "✗"}</span>
-        <div>
-          <p className="font-semibold text-sm">
-            {isSuccess ? "Reconstruction complete" : "Reconstruction failed"}
-          </p>
+        <span className="text-base font-bold">{isSuccess ? "✓" : "✗"}</span>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-sm">
+              {isSuccess ? "Reconstruction complete" : "Reconstruction failed"}
+            </p>
+            <Badge variant={isSuccess ? "success" : "danger"}>
+              {result.status.toUpperCase()}
+            </Badge>
+          </div>
           {result.message && (
-            <p className="text-xs opacity-75 mt-0.5">{result.message}</p>
+            <p className="text-xs opacity-70 mt-0.5">{result.message}</p>
           )}
         </div>
       </div>

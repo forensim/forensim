@@ -1,19 +1,28 @@
 @import "tailwindcss";
 
+/* ── Design tokens ─────────────────────────────────────────────────────────── */
+
 @theme {
-  --color-brand: #f59e0b;
-  --color-brand-dark: #d97706;
-  --color-surface-0: #09090b;
-  --color-surface-1: #111113;
-  --color-surface-2: #18181b;
-  --color-surface-3: #27272a;
-  --color-border: #3f3f46;
+  --color-brand:       #f59e0b;
+  --color-brand-dim:   #d97706;
+  --color-brand-glow:  #f59e0b26;
+
+  --color-surface-0:   #09090b;   /* page background */
+  --color-surface-1:   #111113;   /* panel background */
+  --color-surface-2:   #18181b;   /* card background */
+  --color-surface-3:   #27272a;   /* input / hover */
+  --color-border:      #3f3f46;
+
+  --color-success:     #34d399;
+  --color-danger:      #f87171;
+  --color-info:        #60a5fa;
+
   --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
-}
+/* ── Base reset ────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; }
 
 html, body, #root {
   height: 100%;
@@ -23,12 +32,244 @@ html, body, #root {
   color: #e4e4e7;
   font-family: Inter, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar              { width: 6px; height: 6px; }
+::-webkit-scrollbar-track        { background: var(--color-surface-1); }
+::-webkit-scrollbar-thumb        { background: var(--color-surface-3); border-radius: 3px; transition: background 150ms; }
+::-webkit-scrollbar-thumb:hover  { background: #52525b; }
+::-webkit-scrollbar-corner       { background: var(--color-surface-1); }
+
+/* Firefox */
+* { scrollbar-width: thin; scrollbar-color: var(--color-surface-3) var(--color-surface-1); }
+
+/* ── Focus rings ───────────────────────────────────────────────────────────── */
+
+/* Visible keyboard-navigation ring that matches the brand colour */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
-::-webkit-scrollbar-track { background: var(--color-surface-1); }
-::-webkit-scrollbar-thumb { background: var(--color-surface-3); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+/* Remove default outline on mouse/touch clicks */
+:focus:not(:focus-visible) { outline: none; }
+
+/* ── Smooth base transitions ───────────────────────────────────────────────── */
+
+button, a, input, select, textarea {
+  transition-property: color, background-color, border-color, opacity, box-shadow;
+  transition-duration: 120ms;
+  transition-timing-function: ease;
+}
+
+/* ── Typography helpers ────────────────────────────────────────────────────── */
+
+.font-mono { font-family: var(--font-mono); }
+
+/* ── Skeleton loader animation ─────────────────────────────────────────────── */
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-2) 25%,
+    var(--color-surface-3) 50%,
+    var(--color-surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+/* ── Pulse dot (live indicator) ────────────────────────────────────────────── */
+
+@keyframes pulse-ring {
+  0%   { transform: scale(0.8); opacity: 1; }
+  80%  { transform: scale(2.0); opacity: 0; }
+  100% { transform: scale(2.0); opacity: 0; }
+}
+
+.pulse-dot::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse-ring 1.8s ease-out infinite;
+}
+
+/* ── Panel entry animation ─────────────────────────────────────────────────── */
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-up {
+  animation: fade-up 200ms ease both;
+}
+
+/* ── Badge / chip ──────────────────────────────────────────────────────────── */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  height: 18px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.badge-amber {
+  background: var(--color-brand-glow);
+  color: var(--color-brand);
+  border: 1px solid color-mix(in srgb, var(--color-brand) 30%, transparent);
+}
+
+.badge-success {
+  background: #10b98120;
+  color: var(--color-success);
+  border: 1px solid #34d39930;
+}
+
+.badge-danger {
+  background: #ef444420;
+  color: var(--color-danger);
+  border: 1px solid #f8717130;
+}
+
+/* ── Glass card ────────────────────────────────────────────────────────────── */
+
+.glass-card {
+  background: color-mix(in srgb, var(--color-surface-2) 80%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+/* ── Input base ────────────────────────────────────────────────────────────── */
+
+.input-base {
+  background: var(--color-surface-0);
+  border: 1px solid var(--color-surface-3);
+  border-radius: 6px;
+  color: #e4e4e7;
+  font-size: 0.875rem;
+  padding: 6px 10px;
+  width: 100%;
+}
+
+.input-base::placeholder { color: #52525b; }
+.input-base:focus-visible { border-color: var(--color-brand); }
+
+/* ── Progress bar ──────────────────────────────────────────────────────────── */
+
+@keyframes progress-stripe {
+  from { background-position: 40px 0; }
+  to   { background-position: 0 0; }
+}
+
+.progress-bar-stripe {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 10px,
+    rgba(255,255,255,0.06) 10px,
+    rgba(255,255,255,0.06) 20px
+  );
+  animation: progress-stripe 0.6s linear infinite;
+}
+
+/* ── Amber glow button ─────────────────────────────────────────────────────── */
+
+.btn-brand {
+  background-color: var(--color-brand);
+  color: #09090b;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-size: 0.875rem;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 0 0 0 var(--color-brand-glow);
+  transition: background-color 150ms, box-shadow 150ms, transform 80ms;
+}
+
+.btn-brand:hover {
+  background-color: var(--color-brand-dim);
+  box-shadow: 0 0 0 4px var(--color-brand-glow);
+}
+
+.btn-brand:active { transform: scale(0.97); }
+
+.btn-brand:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ── Divider ───────────────────────────────────────────────────────────────── */
+
+.divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 16px 0;
+}
+
+/* ── Tab underline indicator ───────────────────────────────────────────────── */
+
+.tab-indicator {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-brand);
+  border-radius: 1px 1px 0 0;
+  transition: transform 200ms ease;
+}
+
+/* ── Tooltip ───────────────────────────────────────────────────────────────── */
+
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: #18181b;
+  border: 1px solid #3f3f46;
+  color: #e4e4e7;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms;
+  z-index: 100;
+}
+
+[data-tooltip]:hover::after { opacity: 1; }
+
+/* ── Selection colour ──────────────────────────────────────────────────────── */
+
+::selection {
+  background: color-mix(in srgb, var(--color-brand) 35%, transparent);
+  color: #fff;
+}

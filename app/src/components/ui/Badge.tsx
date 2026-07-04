@@ -1,33 +1,55 @@
-import { cn } from "../../lib/utils";
+/**
+ * Badge / chip components for status indicators, tags, counts.
+ */
 
-type BadgeVariant = "success" | "error" | "warning" | "info" | "neutral";
+type BadgeVariant = "amber" | "success" | "danger" | "neutral" | "info";
 
-export interface BadgeProps {
-  label: string;
+interface BadgeProps {
+  children: React.ReactNode;
   variant?: BadgeVariant;
   className?: string;
 }
 
-const variantStyles: Record<BadgeVariant, string> = {
-  success: "bg-green-900/50 text-green-400 border-green-800/50",
-  error: "bg-red-900/50 text-red-400 border-red-800/50",
-  warning: "bg-amber-900/50 text-amber-400 border-amber-800/50",
-  info: "bg-blue-900/50 text-blue-400 border-blue-800/50",
-  neutral: "bg-gray-800/50 text-gray-400 border-gray-700/50",
+const variantClasses: Record<BadgeVariant, string> = {
+  amber:   "bg-amber-500/15  border-amber-500/35  text-amber-400",
+  success: "bg-emerald-500/15 border-emerald-500/30 text-emerald-400",
+  danger:  "bg-red-500/15    border-red-500/30    text-red-400",
+  info:    "bg-blue-500/15   border-blue-500/30   text-blue-400",
+  neutral: "bg-zinc-700/50   border-zinc-600/50   text-zinc-400",
 };
 
-export function Badge({ label, variant = "neutral", className }: BadgeProps) {
+export function Badge({
+  children,
+  variant = "neutral",
+  className = "",
+}: BadgeProps) {
   return (
     <span
-      className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium",
-        variantStyles[variant],
-        className
-      )}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full
+                  text-[10px] font-semibold tracking-wide border
+                  ${variantClasses[variant]} ${className}`}
     >
-      {label}
+      {children}
     </span>
   );
 }
 
-export default Badge;
+export function PulseBadge({
+  label,
+  variant = "success",
+}: {
+  label: string;
+  variant?: BadgeVariant;
+}) {
+  return (
+    <Badge variant={variant} className="gap-1.5">
+      <span
+        className={`w-1.5 h-1.5 rounded-full animate-ping ${
+          variant === "success" ? "bg-emerald-400" : "bg-current"
+        }`}
+        aria-hidden
+      />
+      {label}
+    </Badge>
+  );
+}
