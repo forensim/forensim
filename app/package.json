@@ -10,6 +10,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@mkkellogg/gaussian-splats-3d": "^0.4.7",
     "@radix-ui/react-dialog": "^1.1.18",
     "@radix-ui/react-progress": "^1.1.11",
     "@radix-ui/react-select": "^2.3.2",

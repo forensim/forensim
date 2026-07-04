@@ -3,6 +3,8 @@ import type {
   ProgressEvent,
   ReconstructRequest,
   ReconstructResponse,
+  SimulateRequest,
+  SimulateResponse,
 } from "./types";
 
 /**
@@ -75,7 +77,7 @@ export class ApiClient {
   async runReconstruction(
     req: ReconstructRequest
   ): Promise<ReconstructResponse> {
-    const response = await fetch(this.url("/reconstruct/run"), {
+    const response = await fetch(this.url("/api/reconstruct/run"), {
       method: "POST",
       headers: {
         Accept: "application/json",
@@ -99,7 +101,7 @@ export class ApiClient {
     onDone: () => void,
     onError: (e: Error) => void
   ): () => void {
-    const source = new EventSource(this.url("/reconstruct/progress"));
+    const source = new EventSource(this.url("/api/reconstruct/progress"));
 
     source.addEventListener("message", (event: MessageEvent) => {
       try {
@@ -128,6 +130,25 @@ export class ApiClient {
     return () => {
       source.close();
     };
+  }
+
+  /**
+   * Run a Monte Carlo PhysX simulation across multiple scenarios.
+   *
+   * @param req - Simulation request with USD path, scenarios, and step settings.
+   * @returns Simulation response with per-scenario results.
+   * @throws Error when the request fails or the response is invalid.
+   */
+  async runSimulation(req: SimulateRequest): Promise<SimulateResponse> {
+    const response = await fetch(this.url("/api/simulate/run"), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(req),
+    });
+    return this.parseJson<SimulateResponse>(response);
   }
 
   /**

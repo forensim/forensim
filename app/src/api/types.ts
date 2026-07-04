@@ -61,3 +61,40 @@ export interface ProgressEvent {
   /** Human-readable status message for the current step. */
   message: string;
 }
+
+// ── Simulation types ──────────────────────────────────────────────────────────
+
+/** Initial conditions for one object in a simulation scenario. */
+export interface ScenarioRequest {
+  object_name: string;
+  velocity: [number, number, number];
+  angular_velocity: [number, number, number];
+}
+
+/** Request payload to run a Monte Carlo PhysX simulation. */
+export interface SimulateRequest {
+  usd_path: string;
+  scenarios: ScenarioRequest[];
+  n_steps?: number;
+  dt?: number;
+}
+
+/** Per-scenario result returned by the simulation API. */
+export interface SimRunResult {
+  scenario: { object_name: string; velocity: number[] };
+  final_positions: Record<string, number[]>;
+  trajectory_length: number;
+}
+
+/** Top-level simulation response. */
+export interface SimulateResponse {
+  status: string;
+  results: SimRunResult[];
+}
+
+/** A 3D trajectory overlay for the splat viewer. */
+export interface TrajectoryData {
+  id: string;
+  color: string;
+  points: [number, number, number][];
+}

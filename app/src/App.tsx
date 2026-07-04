@@ -3,9 +3,11 @@ import ApiStatusBar from "./components/ApiStatusBar";
 import EvidencePicker from "./components/EvidencePicker";
 import ReconstructionPanel from "./components/ReconstructionPanel";
 import ResultPanel from "./components/ResultPanel";
-import type { ReconstructResponse } from "./api/types";
+import SplatViewer from "./components/SplatViewer";
+import ScenarioPanel from "./components/ScenarioPanel";
+import type { ReconstructResponse, TrajectoryData, SimRunResult } from "./api/types";
 
-type Tab = "evidence" | "reconstruct" | "results";
+type Tab = "evidence" | "reconstruct" | "view" | "simulate";
 
 function TabButton({
   label,
@@ -44,11 +46,18 @@ function TabButton({
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("evidence");
+
+  // Evidence selection
   const [selection, setSelection] = useState<{
     imageDir: string;
     workspaceDir: string;
   } | null>(null);
+
+  // Reconstruction result
   const [result, setResult] = useState<ReconstructResponse | null>(null);
+
+  // Simulation trajectories to overlay on the splat viewer
+  const [trajectories, setTrajectories] = useState<TrajectoryData[]>([]);
 
   const handleSelectionChange = useCallback(
     (sel: { imageDir: string; workspaceDir: string } | null) => {
@@ -59,15 +68,27 @@ export default function App() {
 
   const handleResult = useCallback((res: ReconstructResponse) => {
     setResult(res);
-    setTab("results");
+    setTab("view");
   }, []);
+
+  const handleSimResults = useCallback(
+    (_results: SimRunResult[], newTrajectories: TrajectoryData[]) => {
+      setTrajectories(newTrajectories);
+      // Switch to 3D view to show overlaid trajectories
+      setTab("view");
+    },
+    []
+  );
+
+  const hasResult = result !== null;
+  const plyPath = result?.ply_path ?? null;
+  const usdPath = result?.usd_path ?? null;
 
   return (
     <div className="flex flex-col h-screen bg-[#09090b] text-zinc-200 overflow-hidden">
       {/* ── Top bar ─────────────────────────────────────────────── */}
       <header className="flex items-center justify-between px-5 py-3 border-b border-zinc-800 bg-zinc-950 shrink-0">
         <div className="flex items-center gap-3">
-          {/* Logo mark */}
           <div className="w-7 h-7 rounded bg-amber-500 flex items-center justify-center text-zinc-950 font-black text-sm select-none">
             FS
           </div>
@@ -78,7 +99,7 @@ export default function App() {
             </p>
           </div>
         </div>
-        <div className="text-[10px] font-mono text-zinc-700 select-none">v0.1.0</div>
+        <div className="text-[10px] font-mono text-zinc-700 select-none">v0.1.0 · Phase 2</div>
       </header>
 
       {/* ── API status ──────────────────────────────────────────── */}
@@ -99,87 +120,144 @@ export default function App() {
           onClick={() => setTab("reconstruct")}
         />
         <TabButton
-          label="Results"
-          active={tab === "results"}
-          disabled={!result}
-          onClick={() => setTab("results")}
-          badge={result ? "1" : undefined}
+          label="3D View"
+          active={tab === "view"}
+          disabled={!hasResult}
+          onClick={() => setTab("view")}
+          badge={hasResult ? (trajectories.length > 0 ? `${trajectories.length}T` : "✓") : undefined}
+        />
+        <TabButton
+          label="Simulate"
+          active={tab === "simulate"}
+          disabled={!hasResult}
+          onClick={() => setTab("simulate")}
         />
       </nav>
 
       {/* ── Main content ────────────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto p-5">
+      <main className="flex-1 overflow-hidden flex flex-col">
+        {/* ── Evidence tab ──────────────────────────────────────── */}
         {tab === "evidence" && (
-          <div className="max-w-4xl mx-auto space-y-4">
-            <div>
-              <h2 className="text-base font-semibold text-zinc-100">Load Evidence</h2>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                Select a folder of scene photographs and an output workspace for
-                reconstruction results.
-              </p>
+          <div className="flex-1 overflow-y-auto p-5">
+            <div className="max-w-4xl mx-auto space-y-4">
+              <div>
+                <h2 className="text-base font-semibold text-zinc-100">Load Evidence</h2>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Select a folder of scene photographs and an output workspace for
+                  reconstruction results.
+                </p>
+              </div>
+              <EvidencePicker onSelectionChange={handleSelectionChange} />
+              {selection && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setTab("reconstruct")}
+                    className="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400
+                               text-zinc-950 font-semibold text-sm transition-colors"
+                  >
+                    Continue →
+                  </button>
+                </div>
+              )}
             </div>
-            <EvidencePicker onSelectionChange={handleSelectionChange} />
-            {selection && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setTab("reconstruct")}
-                  className="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400
-                             text-zinc-950 font-semibold text-sm transition-colors"
-                >
-                  Continue →
-                </button>
+          </div>
+        )}
+
+        {/* ── Reconstruct tab ───────────────────────────────────── */}
+        {tab === "reconstruct" && selection && (
+          <div className="flex-1 overflow-y-auto p-5">
+            <div className="max-w-2xl mx-auto space-y-4">
+              <div>
+                <h2 className="text-base font-semibold text-zinc-100">Reconstruction</h2>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Configure and run the COLMAP → Gaussian Splatting → USD pipeline.
+                </p>
+              </div>
+              <div className="flex gap-3 text-xs text-zinc-500 font-mono bg-zinc-900 border border-zinc-800 rounded px-3 py-2">
+                <span className="text-zinc-600">imgs:</span>
+                <span className="text-zinc-400 truncate flex-1">{selection.imageDir}</span>
+              </div>
+              <div className="flex gap-3 text-xs text-zinc-500 font-mono bg-zinc-900 border border-zinc-800 rounded px-3 py-2">
+                <span className="text-zinc-600">out:</span>
+                <span className="text-zinc-400 truncate flex-1">{selection.workspaceDir}</span>
+              </div>
+              <ReconstructionPanel
+                imageDir={selection.imageDir}
+                workspaceDir={selection.workspaceDir}
+                onResult={handleResult}
+              />
+              {result && (
+                <div>
+                  <ResultPanel result={result} />
+                  <div className="flex justify-end mt-3">
+                    <button
+                      type="button"
+                      onClick={() => setTab("view")}
+                      className="px-5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400
+                                 text-zinc-950 font-semibold text-sm transition-colors"
+                    >
+                      Open in 3D View →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── 3D View tab ───────────────────────────────────────── */}
+        {tab === "view" && (
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* path strip */}
+            {plyPath && (
+              <div className="shrink-0 px-4 py-2 border-b border-zinc-800 bg-zinc-950
+                              flex items-center justify-between gap-4">
+                <span className="text-[11px] font-mono text-zinc-500 truncate flex-1">
+                  {plyPath}
+                </span>
+                {trajectories.length > 0 && (
+                  <span className="text-[11px] text-amber-500 shrink-0">
+                    {trajectories.length} trajectory overlay{trajectories.length !== 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+            )}
+            <div className="flex-1">
+              <SplatViewer
+                plyPath={plyPath}
+                trajectories={trajectories}
+                className="w-full h-full"
+              />
+            </div>
+            {!plyPath && (
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-zinc-600 text-sm">
+                  No PLY file from reconstruction yet.
+                </p>
               </div>
             )}
           </div>
         )}
 
-        {tab === "reconstruct" && selection && (
-          <div className="max-w-2xl mx-auto space-y-4">
-            <div>
-              <h2 className="text-base font-semibold text-zinc-100">Reconstruction</h2>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                Configure and run the COLMAP → Gaussian Splatting → USD pipeline.
-              </p>
-            </div>
-            {/* Evidence summary */}
-            <div className="flex gap-3 text-xs text-zinc-500 font-mono bg-zinc-900 border border-zinc-800 rounded px-3 py-2">
-              <span className="text-zinc-600">imgs:</span>
-              <span className="text-zinc-400 truncate flex-1">{selection.imageDir}</span>
-            </div>
-            <div className="flex gap-3 text-xs text-zinc-500 font-mono bg-zinc-900 border border-zinc-800 rounded px-3 py-2">
-              <span className="text-zinc-600">out:</span>
-              <span className="text-zinc-400 truncate flex-1">{selection.workspaceDir}</span>
-            </div>
-            <ReconstructionPanel
-              imageDir={selection.imageDir}
-              workspaceDir={selection.workspaceDir}
-              onResult={handleResult}
-            />
-          </div>
-        )}
-
-        {tab === "results" && result && (
-          <div className="max-w-2xl mx-auto space-y-4">
-            <div>
-              <h2 className="text-base font-semibold text-zinc-100">Results</h2>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                Reconstruction output — load the USD scene in Omniverse to continue.
-              </p>
-            </div>
-            <ResultPanel result={result} />
-            <div className="flex justify-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setResult(null);
-                  setTab("evidence");
-                }}
-                className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700
-                           text-zinc-300 text-sm font-medium transition-colors border border-zinc-700"
-              >
-                Start New Case
-              </button>
+        {/* ── Simulate tab ──────────────────────────────────────── */}
+        {tab === "simulate" && (
+          <div className="flex-1 overflow-y-auto p-5">
+            <div className="max-w-2xl mx-auto space-y-4">
+              <div>
+                <h2 className="text-base font-semibold text-zinc-100">Physics Simulation</h2>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Define objects and initial conditions, then run a Monte Carlo
+                  PhysX simulation. Results are overlaid on the 3D scene.
+                </p>
+              </div>
+              {usdPath && (
+                <div className="flex gap-3 text-xs font-mono bg-zinc-900 border border-zinc-800 rounded px-3 py-2">
+                  <span className="text-zinc-600">usd:</span>
+                  <span className="text-zinc-400 truncate flex-1">{usdPath}</span>
+                </div>
+              )}
+              <ScenarioPanel usdPath={usdPath} onResults={handleSimResults} />
             </div>
           </div>
         )}
@@ -189,7 +267,7 @@ export default function App() {
       <footer className="shrink-0 px-5 py-2 border-t border-zinc-800 bg-zinc-950
                          flex items-center justify-between text-[10px] text-zinc-700">
         <span>ForenSim · Forensic Scene Reconstruction Platform</span>
-        <span className="font-mono">Phase 1.5</span>
+        <span className="font-mono">Phase 2</span>
       </footer>
     </div>
   );
