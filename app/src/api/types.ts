@@ -133,6 +133,49 @@ export interface InferResponse {
   map_description: string | null;
 }
 
+// ── Sensitivity analysis types ────────────────────────────────────────────────
+
+/** One evidence source descriptor for sensitivity analysis. */
+export interface EvidenceSourceModel {
+  /** Human-readable label, e.g. "blood_spatter_roi". */
+  name: string;
+  /** Per-hypothesis additive log-likelihood contribution. */
+  log_likelihood_delta: number[];
+  /** Current weighting factor (default 1.0). */
+  weight?: number;
+}
+
+/** Request payload for the sensitivity analysis endpoint. */
+export interface SensitivityRequest {
+  /** Already-ranked hypotheses from a previous /api/infer/rank call. */
+  hypotheses: HypothesisResult[];
+  /** Evidence sources to analyse. */
+  evidence_sources: EvidenceSourceModel[];
+}
+
+/** Result for one evidence source. */
+export interface SensitivityResultItem {
+  evidence_name: string;
+  /** P(top hypothesis | all evidence). */
+  baseline_top_posterior: number;
+  /** P(top hypothesis | all evidence except this source). */
+  loo_top_posterior: number;
+  /** baseline_top_posterior - loo_top_posterior (positive = boosts top hyp). */
+  impact: number;
+  /** impact / baseline_top_posterior × 100. */
+  impact_pct: number;
+  /** How many positions the top hypothesis drops when this evidence is removed. */
+  rank_change: number;
+}
+
+/** Top-level sensitivity response. */
+export interface SensitivityResponse {
+  status: string;
+  results: SensitivityResultItem[];
+  baseline_top_posterior: number;
+  top_hypothesis: string | null;
+}
+
 // ── Annotation types ──────────────────────────────────────────────────────────
 
 /** Supported annotation ROI shapes. */
@@ -168,6 +211,66 @@ export interface SaveAnnotationsResponse {
 export interface LoadAnnotationsResponse {
   status: string;
   annotations: Annotation[];
+}
+
+// ── NuRec types ───────────────────────────────────────────────────────────────
+
+/** Health-check response for the NuRec gRPC server. */
+export interface NuRecHealthResponse {
+  status: string;
+  address: string;
+  reachable: boolean;
+}
+
+/** Metadata for one scene managed by the NuRec server. */
+export interface NuRecSceneInfo {
+  name: string;
+  id: string;
+  asset_path: string;
+  description: string;
+}
+
+/** Response listing available NuRec scenes. */
+export interface NuRecListScenesResponse {
+  status: string;
+  scenes: NuRecSceneInfo[];
+}
+
+/** Request to load a specific scene into NuRec. */
+export interface NuRecLoadSceneRequest {
+  scene_id: string;
+  address?: string;
+}
+
+/** Response returned when a scene is loaded. */
+export interface NuRecLoadSceneResponse {
+  status: string;
+  loaded: boolean;
+  scene_id: string;
+}
+
+/** 6-DOF camera pose for NuRec rendering. */
+export interface NuRecCameraPose {
+  position: [number, number, number];
+  quaternion: [number, number, number, number];
+}
+
+/** Request payload to render a single frame via NuRec. */
+export interface NuRecRenderRequest {
+  scene_id: string;
+  pose: NuRecCameraPose;
+  width?: number;
+  height?: number;
+  address?: string;
+}
+
+/** Response returned when a frame is rendered. */
+export interface NuRecRenderResponse {
+  status: string;
+  width: number;
+  height: number;
+  /** Base64-encoded PNG image data. */
+  image_base64: string;
 }
 
 // ── Export / Report types ─────────────────────────────────────────────────────

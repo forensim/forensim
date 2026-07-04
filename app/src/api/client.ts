@@ -3,6 +3,12 @@ import type {
   InferRequest,
   InferResponse,
   LoadAnnotationsResponse,
+  NuRecHealthResponse,
+  NuRecListScenesResponse,
+  NuRecLoadSceneRequest,
+  NuRecLoadSceneResponse,
+  NuRecRenderRequest,
+  NuRecRenderResponse,
   ProgressEvent,
   ReconstructRequest,
   ReconstructResponse,
@@ -10,6 +16,8 @@ import type {
   ReportResponse,
   SaveAnnotationsRequest,
   SaveAnnotationsResponse,
+  SensitivityRequest,
+  SensitivityResponse,
   SimulateRequest,
   SimulateResponse,
   UsdExportRequest,
@@ -181,6 +189,25 @@ export class ApiClient {
   }
 
   /**
+   * Run sensitivity analysis to determine which evidence sources most affect
+   * the top-hypothesis posterior.
+   *
+   * @param req - Sensitivity request with ranked hypotheses and evidence sources.
+   * @returns Per-evidence impact scores sorted by absolute influence.
+   */
+  async runSensitivity(req: SensitivityRequest): Promise<SensitivityResponse> {
+    const response = await fetch(this.url("/api/infer/sensitivity"), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(req),
+    });
+    return this.parseJson<SensitivityResponse>(response);
+  }
+
+  /**
    * Save evidence ROI annotations to a workspace sidecar.
    *
    * @param req - Save request with workspace directory and annotations.
@@ -221,6 +248,84 @@ export class ApiClient {
     return this.parseJson<LoadAnnotationsResponse>(response);
   }
 
+  // ── NuRec gRPC proxy ──────────────────────────────────────────────────────
+
+  /**
+   * Check connectivity to the NuRec gRPC server.
+   *
+   * @param address - NuRec server address (default: "localhost:8080").
+   * @returns Reachability status and address.
+   */
+  async nurecHealth(address = "localhost:8080"): Promise<NuRecHealthResponse> {
+    const response = await fetch(
+      this.url(`/api/nurec/health?address=${encodeURIComponent(address)}`),
+      {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      }
+    );
+    return this.parseJson<NuRecHealthResponse>(response);
+  }
+
+  /**
+   * List scenes available on the NuRec server.
+   *
+   * @param address - NuRec server address.
+   * @returns Available scenes metadata.
+   */
+  async nurecListScenes(
+    address = "localhost:8080"
+  ): Promise<NuRecListScenesResponse> {
+    const response = await fetch(
+      this.url(`/api/nurec/scenes?address=${encodeURIComponent(address)}`),
+      {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      }
+    );
+    return this.parseJson<NuRecListScenesResponse>(response);
+  }
+
+  /**
+   * Load a scene into the NuRec server's renderer.
+   *
+   * @param req - Load scene request with scene_id and optional server address.
+   * @returns Whether the load succeeded.
+   */
+  async nurecLoadScene(
+    req: NuRecLoadSceneRequest
+  ): Promise<NuRecLoadSceneResponse> {
+    const response = await fetch(this.url("/api/nurec/load"), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(req),
+    });
+    return this.parseJson<NuRecLoadSceneResponse>(response);
+  }
+
+  /**
+   * Render a single frame at the given camera pose via NuRec.
+   *
+   * @param req - Render request with scene_id, pose, and resolution.
+   * @returns Base64-encoded PNG image data.
+   */
+  async nurecRender(req: NuRecRenderRequest): Promise<NuRecRenderResponse> {
+    const response = await fetch(this.url("/api/nurec/render"), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(req),
+    });
+    return this.parseJson<NuRecRenderResponse>(response);
+  }
+
+  // ── Export / Report ───────────────────────────────────────────────────────
+
   /**
    * Generate a PDF forensic report from case metadata and pipeline results.
    *
@@ -258,6 +363,29 @@ export class ApiClient {
   }
 
   /**
+   * Download a file from the API server by absolute path.
+   *
+   * @param filePath - Absolute path on the server to the file to download.
+   * @returns The file as a Blob.
+   */
+  async downloadFile(filePath: string): Promise<Blob> {
+    const response = await fetch(
+      this.url(`/api/export/download?path=${encodeURIComponent(filePath)}`),
+      {
+        method: "GET",
+        headers: { Accept: "application/octet-stream" },
+      }
+    );
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(
+        `Download failed: ${response.status} ${response.statusText}${body ? ` - ${body}` : ""}`
+      );
+    }
+    return response.blob();
+  }
+
+  /**
    * Generate an MP4 flythrough video from a 3D point cloud and trajectories.
    *
    * @param req - Video request with PLY path, trajectories, and render settings.
@@ -274,43 +402,7 @@ export class ApiClient {
     });
     return this.parseJson<VideoResponse>(response);
   }
-
-  /**
-   * Download an exported file from the backend by absolute path.
-   *
-   * @param path - Absolute file path on the backend.
-   * @returns The file as a Blob.
-   */
-  async downloadFile(path: string): Promise<Blob> {
-    const response = await fetch(
-      this.url(`/api/export/download?path=${encodeURIComponent(path)}`),
-      {
-        method: "GET",
-      }
-    );
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      throw new Error(
-        `Download failed: ${response.status} ${response.statusText}${body ? ` - ${body}` : ""}`
-      );
-    }
-    return response.blob();
-  }
-
-  async checkApiAvailable(): Promise<boolean> {
-    try {
-      await this.health();
-      return true;
-    } catch {
-      return false;
-    }
-  }
 }
 
-/**
- * Singleton API client used throughout the ForenSim frontend.
- *
- * The base URL defaults to `http://127.0.0.1:8008` and can be overridden by
- * setting the `VITE_API_URL` environment variable before the app is built.
- */
+/** Default singleton API client instance. */
 export const apiClient = new ApiClient();

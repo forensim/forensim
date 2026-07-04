@@ -182,3 +182,107 @@ async def rank_hypotheses(req: InferRequest) -> InferResponse:
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+# ── Sensitivity analysis models ───────────────────────────────────────────────
+
+
+class EvidenceSourceModel(BaseModel):
+    name: str
+    log_likelihood_delta: list[float]
+    weight: float = 1.0
+
+
+class SensitivityRequest(BaseModel):
+    hypotheses: list[HypothesisResult]
+    evidence_sources: list[EvidenceSourceModel]
+
+
+class SensitivityResultModel(BaseModel):
+    evidence_name: str
+    baseline_top_posterior: float
+    loo_top_posterior: float
+    impact: float
+    impact_pct: float
+    rank_change: int
+
+
+class SensitivityResponse(BaseModel):
+    status: str
+    results: list[SensitivityResultModel]
+    baseline_top_posterior: float
+    top_hypothesis: str | None = None
+
+
+# ── Sensitivity route ─────────────────────────────────────────────────────────
+
+
+@router.post("/sensitivity", response_model=SensitivityResponse)
+async def compute_sensitivity_route(req: SensitivityRequest) -> SensitivityResponse:
+    """
+    Compute leave-one-out sensitivity of each evidence source on the top
+    hypothesis posterior.
+    """
+    try:
+        from forensim.infer.sensitivity import EvidenceSource, compute_sensitivity
+        from forensim.infer.sequence import ScoredHypothesis
+
+        loop = asyncio.get_event_loop()
+
+        hypotheses: list[ScoredHypothesis] = []
+        for i, h in enumerate(req.hypotheses):
+            hypotheses.append(
+                ScoredHypothesis(
+                    index=i,
+                    description=h.description,
+                    log_probability=h.log_probability,
+                    posterior=h.posterior,
+                    events=h.events,
+                    bayes_factor=h.bayes_factor if h.bayes_factor is not None else float("nan"),
+                )
+            )
+
+        evidence_sources = [
+            EvidenceSource(
+                name=e.name,
+                log_likelihood_delta=e.log_likelihood_delta,
+                weight=e.weight,
+            )
+            for e in req.evidence_sources
+        ]
+
+        results = await loop.run_in_executor(
+            None,
+            compute_sensitivity,
+            hypotheses,
+            evidence_sources,
+        )
+
+        top_hypothesis = next(
+            (h.description for h in req.hypotheses if h.rank == 1),
+            None,
+        )
+        baseline_top_posterior = (
+            results[0].baseline_top_posterior if results else 0.0
+        )
+
+        return SensitivityResponse(
+            status="success",
+            baseline_top_posterior=baseline_top_posterior,
+            top_hypothesis=top_hypothesis,
+            results=[
+                SensitivityResultModel(
+                    evidence_name=r.evidence_name,
+                    baseline_top_posterior=round(r.baseline_top_posterior, 6),
+                    loo_top_posterior=round(r.loo_top_posterior, 6),
+                    impact=round(r.impact, 6),
+                    impact_pct=round(r.impact_pct, 6),
+                    rank_change=r.rank_change,
+                )
+                for r in results
+            ],
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

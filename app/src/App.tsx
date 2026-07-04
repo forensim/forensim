@@ -8,9 +8,11 @@ import ScenarioPanel from "./components/ScenarioPanel";
 import InferencePanel from "./components/InferencePanel";
 import ExportPanel from "./components/ExportPanel";
 import AnnotationPanel from "./components/AnnotationPanel";
+import NuRecPanel from "./components/NuRecPanel";
+import SensitivityPanel from "./components/SensitivityPanel";
 import type { Annotation, InferResponse, ReconstructResponse, SimulateResponse, TrajectoryData, SimRunResult } from "./api/types";
 
-type Tab = "evidence" | "annotate" | "reconstruct" | "view" | "simulate" | "infer" | "export";
+type Tab = "evidence" | "annotate" | "reconstruct" | "view" | "simulate" | "infer" | "sensitivity" | "nurec" | "export";
 
 function TabButton({
   label,
@@ -132,7 +134,7 @@ export default function App() {
             </p>
           </div>
         </div>
-        <div className="text-[10px] font-mono text-zinc-700 select-none">v0.1.0 · Phase 4</div>
+        <div className="text-[10px] font-mono text-zinc-700 select-none">v0.1.0 · Phase 4C</div>
       </header>
 
       {/* ── API status ──────────────────────────────────────────── */}
@@ -177,6 +179,17 @@ export default function App() {
           active={tab === "infer"}
           onClick={() => setTab("infer")}
           badge={simLogLikelihoods.length > 0 ? `${simLogLikelihoods.length}H` : undefined}
+        />
+        <TabButton
+          label="Sensitivity"
+          active={tab === "sensitivity"}
+          onClick={() => setTab("sensitivity")}
+          badge={inferenceResult ? "✓" : undefined}
+        />
+        <TabButton
+          label="NuRec"
+          active={tab === "nurec"}
+          onClick={() => setTab("nurec")}
         />
         <TabButton
           label="Export"
@@ -363,6 +376,46 @@ export default function App() {
                 annotations={annotations}
                 onResult={handleInferenceResult}
               />
+            </div>
+          </div>
+        )}
+
+        {/* ── Sensitivity tab ─────────────────────────────────────── */}
+        {tab === "sensitivity" && (
+          <div className="flex-1 overflow-y-auto p-5">
+            <div className="max-w-3xl mx-auto space-y-4">
+              <div>
+                <h2 className="text-base font-semibold text-zinc-100">
+                  Sensitivity Analysis
+                </h2>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Determine which evidence sources most influence the top-ranked
+                  hypothesis. Uses leave-one-out re-ranking to quantify each
+                  source's impact on posterior probability.
+                </p>
+              </div>
+              <SensitivityPanel
+                hypotheses={inferenceResult?.hypotheses ?? []}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── NuRec tab ───────────────────────────────────────────── */}
+        {tab === "nurec" && (
+          <div className="flex-1 overflow-y-auto p-5">
+            <div className="max-w-3xl mx-auto space-y-4">
+              <div>
+                <h2 className="text-base font-semibold text-zinc-100">
+                  NVIDIA NuRec
+                </h2>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Connect to a NuRec gRPC server, browse available neural
+                  radiance scenes, and render photorealistic frames at arbitrary
+                  camera poses.
+                </p>
+              </div>
+              <NuRecPanel />
             </div>
           </div>
         )}

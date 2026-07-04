@@ -18,7 +18,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routes import annotate, export, infer, reconstruct, simulate
+from .routes import annotate, export, infer, nurec, reconstruct, simulate
 
 
 @asynccontextmanager
@@ -50,6 +50,7 @@ app.include_router(simulate.router, prefix="/api/simulate", tags=["simulate"])
 app.include_router(infer.router, prefix="/api/infer", tags=["infer"])
 app.include_router(annotate.router, prefix="/api/annotate", tags=["annotate"])
 app.include_router(export.router, prefix="/api/export", tags=["export"])
+app.include_router(nurec.router, prefix="/api/nurec", tags=["nurec"])
 
 
 @app.get("/health")
