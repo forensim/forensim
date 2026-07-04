@@ -12,8 +12,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from forensim.simulate.physx_runner import (
-    SimulationScenario,
     SimulationResult,
+    SimulationScenario,
     run_monte_carlo,
 )
 from forensim.simulate.scene_builder import (
@@ -220,3 +220,140 @@ async def run_simulation_stream(req: SimulateRequest) -> StreamingResponse:
 
 def _sse(event: str, data: object) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
+# ── Blood spatter simulation ─────────────────────────────────────────────────
+
+
+class SpatterRequest(BaseModel):
+    source_position: list[float] = [0.0, 1.2, 0.0]
+    """[x, y, z] in metres."""
+    source_velocity: list[float] = [5.0, -2.0, 0.0]
+    """[vx, vy, vz] m/s."""
+    n_droplets: int = 200
+    velocity_spread_angle: float = 45.0
+    surface_y: float = 0.0
+    max_time: float = 3.0
+    seed: int = 42
+
+
+class SpatterImpactModel(BaseModel):
+    position_2d: list[float]
+    """[x, z] impact coordinates on surface."""
+    radius_mm: float
+    """Radius in mm (for display)."""
+    impact_speed: float
+    impact_angle: float
+    stain_major_mm: float
+    """Major axis in mm."""
+    stain_minor_mm: float
+    """Minor axis in mm."""
+    stain_angle: float
+
+
+class SpatterAnalysisModel(BaseModel):
+    pattern_type: str
+    confidence: float
+    source_height: float
+    source_distance: float
+    mean_stain_area_mm2: float
+    stain_count: int
+    directionality_score: float
+    stringing_factor: float
+    impact_angle_mean: float
+    log_likelihood: float
+    notes: list[str]
+
+
+class SpatterResponse(BaseModel):
+    status: str
+    n_impacts: int
+    n_airborne: int
+    pattern_centroid: list[float]
+    """[x, z]."""
+    pattern_spread_radius: float
+    estimated_source: list[float]
+    """[x, y, z]."""
+    direction_vector: list[float]
+    """[x, z]."""
+    impacts: list[SpatterImpactModel]
+    analysis: SpatterAnalysisModel
+    duration_seconds: float
+
+
+@router.post("/spatter", response_model=SpatterResponse)
+async def run_spatter_simulation(req: SpatterRequest) -> SpatterResponse:
+    """Run blood spatter SPH simulation and return droplet impact map + forensic analysis."""
+    import numpy as np
+
+    from forensim.simulate.fluid_spatter import SpatterConfig, simulate_spatter
+    from forensim.simulate.spatter_analysis import analyse_pattern
+
+    config = SpatterConfig(
+        n_droplets=req.n_droplets,
+        velocity_spread_angle=req.velocity_spread_angle,
+        surface_y=req.surface_y,
+        max_time=req.max_time,
+        seed=req.seed,
+    )
+
+    source_pos = np.array(req.source_position, dtype=np.float64)
+    source_vel = np.array(req.source_velocity, dtype=np.float64)
+
+    t0 = time.perf_counter()
+
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(
+        None, simulate_spatter, source_pos, source_vel, config
+    )
+
+    metrics = analyse_pattern(result)
+    duration = time.perf_counter() - t0
+
+    # Convert impacts to response models (metres → mm for display)
+    impact_models = [
+        SpatterImpactModel(
+            position_2d=imp.position_2d.tolist()
+            if hasattr(imp.position_2d, "tolist")
+            else list(imp.position_2d),
+            radius_mm=imp.radius * 1000.0,
+            impact_speed=imp.impact_speed,
+            impact_angle=imp.impact_angle,
+            stain_major_mm=imp.stain_major * 1000.0,
+            stain_minor_mm=imp.stain_minor * 1000.0,
+            stain_angle=imp.stain_angle,
+        )
+        for imp in result.impacts
+    ]
+
+    analysis_model = SpatterAnalysisModel(
+        pattern_type=metrics.pattern_type,
+        confidence=metrics.confidence,
+        source_height=metrics.source_height,
+        source_distance=metrics.source_distance,
+        mean_stain_area_mm2=metrics.mean_stain_area,
+        stain_count=metrics.stain_count,
+        directionality_score=metrics.directionality_score,
+        stringing_factor=metrics.stringing_factor,
+        impact_angle_mean=metrics.impact_angle_mean,
+        log_likelihood=metrics.log_likelihood,
+        notes=metrics.notes,
+    )
+
+    def _to_list(arr: object) -> list[float]:
+        if hasattr(arr, "tolist"):
+            return arr.tolist()  # type: ignore[union-attr]
+        return list(arr)  # type: ignore[arg-type]
+
+    return SpatterResponse(
+        status="success",
+        n_impacts=len(result.impacts),
+        n_airborne=result.n_airborne,
+        pattern_centroid=_to_list(result.pattern_centroid),
+        pattern_spread_radius=result.pattern_spread_radius,
+        estimated_source=_to_list(result.estimated_source),
+        direction_vector=_to_list(result.direction_vector),
+        impacts=impact_models,
+        analysis=analysis_model,
+        duration_seconds=round(duration, 3),
+    )

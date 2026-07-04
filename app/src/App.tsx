@@ -10,9 +10,10 @@ import ExportPanel from "./components/ExportPanel";
 import AnnotationPanel from "./components/AnnotationPanel";
 import NuRecPanel from "./components/NuRecPanel";
 import SensitivityPanel from "./components/SensitivityPanel";
+import SpatterPanel from "./components/SpatterPanel";
 import type { Annotation, InferResponse, ReconstructResponse, SimulateResponse, TrajectoryData, SimRunResult } from "./api/types";
 
-type Tab = "evidence" | "annotate" | "reconstruct" | "view" | "simulate" | "infer" | "sensitivity" | "nurec" | "export";
+type Tab = "evidence" | "annotate" | "reconstruct" | "view" | "simulate" | "spatter" | "infer" | "sensitivity" | "nurec" | "export";
 
 function TabButton({
   label,
@@ -173,6 +174,11 @@ export default function App() {
           active={tab === "simulate"}
           disabled={!hasResult}
           onClick={() => setTab("simulate")}
+        />
+        <TabButton
+          label="Spatter"
+          active={tab === "spatter"}
+          onClick={() => setTab("spatter")}
         />
         <TabButton
           label="Infer"
@@ -345,6 +351,23 @@ export default function App() {
                 </div>
               )}
               <ScenarioPanel usdPath={usdPath} onResults={handleSimResults} />
+            </div>
+          </div>
+        )}
+
+        {/* ── Spatter tab ───────────────────────────────────────── */}
+        {tab === "spatter" && (
+          <div className="flex-1 overflow-y-auto p-5 animate-fade-up">
+            <div className="max-w-3xl mx-auto space-y-4">
+              <div>
+                <h2 className="text-base font-semibold text-zinc-100">Blood Spatter Analysis</h2>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Simulate blood droplet ballistics using a physically-derived SPH model.
+                  Visualise the floor impact map, classify the pattern type, and extract
+                  the area-of-origin for Bayesian evidence integration.
+                </p>
+              </div>
+              <SpatterPanel />
             </div>
           </div>
         )}

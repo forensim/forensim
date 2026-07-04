@@ -20,6 +20,8 @@ import type {
   SensitivityResponse,
   SimulateRequest,
   SimulateResponse,
+  SpatterRequest,
+  SpatterResponse,
   UsdExportRequest,
   UsdExportResponse,
   VideoRequest,
@@ -401,6 +403,28 @@ export class ApiClient {
       body: JSON.stringify(req),
     });
     return this.parseJson<VideoResponse>(response);
+  }
+
+  // ── Blood spatter simulation ───────────────────────────────────────────────
+
+  /**
+   * Run a blood spatter SPH simulation and return the full droplet impact map
+   * with forensic pattern analysis.
+   *
+   * @param req - Source position, ejection velocity, and simulation parameters.
+   * @returns Per-droplet impacts, pattern centroid, area-of-origin estimate,
+   *          and forensic classification metrics.
+   */
+  async runSpatter(req: SpatterRequest): Promise<SpatterResponse> {
+    const response = await fetch(this.url("/api/simulate/spatter"), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(req),
+    });
+    return this.parseJson<SpatterResponse>(response);
   }
 }
 
