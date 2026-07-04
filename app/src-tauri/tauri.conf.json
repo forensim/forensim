@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "d-forensimapp",
+  "productName": "ForenSim",
   "version": "0.1.0",
-  "identifier": "com.victor.d-forensimapp",
+  "identifier": "com.forensim.app",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,13 +12,17 @@
   "app": {
     "windows": [
       {
-        "title": "d-forensimapp",
-        "width": 800,
-        "height": 600
+        "title": "ForenSim",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 900,
+        "minHeight": 600,
+        "decorations": true,
+        "resizable": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self' http://127.0.0.1:8008; img-src 'self' asset: https://asset.localhost blob: data:; style-src 'self' 'unsafe-inline'; connect-src 'self' http://127.0.0.1:8008"
     }
   },
   "bundle": {
@@ -31,5 +35,20 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "dialog": {
+      "all": true
+    },
+    "fs": {
+      "all": true,
+      "scope": ["**"]
+    },
+    "shell": {
+      "all": false,
+      "execute": false,
+      "sidecar": true,
+      "open": false
+    }
   }
 }
