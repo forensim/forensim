@@ -17,11 +17,14 @@ interface HypothesisResult {
   log_probability: number;
   posterior: number;
   events: string[];
+  bayes_factor: number | null;
 }
 
 interface InferResponse {
   status: string;
   hypotheses: HypothesisResult[];
+  posterior_entropy: number | null;
+  map_description: string | null;
 }
 
 /** POST body sent to /api/infer/rank */
@@ -38,6 +41,8 @@ export interface InferencePanelProps {
   /** Optional physx log-likelihoods from simulation (parallel to hypotheses list).
    *  If provided, pre-fills the physxLogLikelihood field for each hypothesis. */
   simulationLogLikelihoods?: number[];
+  /** Called when inference results are received from the backend. */
+  onResult?: (result: InferResponse) => void;
 }
 
 // ── Default constants ──────────────────────────────────────────────────────────
@@ -501,6 +506,7 @@ function ResultCard({ result, rank1LogProb }: ResultCardProps) {
 
 export default function InferencePanel({
   simulationLogLikelihoods,
+  onResult,
 }: InferencePanelProps) {
   // Merge simulationLogLikelihoods into the default hypotheses at mount-time.
   const initialHypotheses: Hypothesis[] = DEFAULT_HYPOTHESES.map((h, i) => ({
@@ -608,6 +614,7 @@ export default function InferencePanel({
       const data = (await response.json()) as InferResponse;
       const sorted = [...data.hypotheses].sort((a, b) => a.rank - b.rank);
       setResults(sorted);
+      onResult?.(data);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       const msg = err instanceof Error ? err.message : String(err);
@@ -615,7 +622,7 @@ export default function InferencePanel({
     } finally {
       setRunning(false);
     }
-  }, [hypotheses, running, vocab, resolveMatrix]);
+  }, [hypotheses, running, vocab, resolveMatrix, onResult]);
 
   // ── Derived values for result display ─────────────────────────────────────
 

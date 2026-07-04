@@ -4,7 +4,7 @@
 > **Organization:** https://github.com/forensim  
 > **Local workspace:** `D:\forensim\`  
 > **Status:** Pre-development / Planning  
-> **Last updated:** 2026-07-03
+> **Last updated:** 2026-07-04
 
 ---
 
@@ -683,18 +683,18 @@ forensim/                          # D:\forensim\ (local) / github.com/forensim/
 - [ ] Render simulation trajectories in 3D viewport
 
 ### Phase 3 — Probabilistic Engine (Weeks 8-10)
-- [ ] Implement Markov chain sequence scorer in Rust (`forensim-core::markov`)
-- [ ] Implement Viterbi HMM in Rust (`forensim-core::hmm`)
-- [ ] Implement Monte Carlo Bayesian engine in Rust
-- [ ] Build PyMC Bayesian model for evidence integration
-- [ ] Build hypothesis ranking and P(H|E) output
-- [ ] Connect to UI: probability panels, likelihood ratio cards
+- [x] Implement Markov chain sequence scorer in Rust (`forensim-core::markov`)
+- [x] Implement Viterbi HMM in Rust (`forensim-core::hmm`)
+- [x] Implement Monte Carlo Bayesian engine in Rust
+- [x] Build PyMC Bayesian model for evidence integration
+- [x] Build hypothesis ranking and P(H|E) output
+- [x] Connect to UI: probability panels, likelihood ratio cards
 
 ### Phase 4 — Advanced Features (Weeks 11-14)
 - [ ] NVIDIA NuRec gRPC client integration
 - [ ] Soft body / fluid simulation for blood spatter analysis
 - [ ] Evidence annotation layer (ROI drawing on images)
-- [ ] Export: PDF report, USD scene, video flythrough
+- [x] Export: PDF report, USD scene, video flythrough
 - [ ] Sensitivity analysis (which evidence most affects ranking)
 - [ ] Omniverse Nucleus integration (optional collaborative mode)
 

@@ -5,8 +5,14 @@ import type {
   ProgressEvent,
   ReconstructRequest,
   ReconstructResponse,
+  ReportRequest,
+  ReportResponse,
   SimulateRequest,
   SimulateResponse,
+  UsdExportRequest,
+  UsdExportResponse,
+  VideoRequest,
+  VideoResponse,
 } from "./types";
 
 /**
@@ -154,12 +160,6 @@ export class ApiClient {
   }
 
   /**
-   * Check whether the API is reachable.
-   *
-   * @returns `true` if the health endpoint responds, otherwise `false`.
-   * Does not throw.
-   */
-  /**
    * Run probabilistic hypothesis ranking via the Bayesian inference engine.
    *
    * @param req - Inference request with sequences, vocab, transition matrix, and optional PhysX scores.
@@ -175,6 +175,79 @@ export class ApiClient {
       body: JSON.stringify(req),
     });
     return this.parseJson<InferResponse>(response);
+  }
+
+  /**
+   * Generate a PDF forensic report from case metadata and pipeline results.
+   *
+   * @param req - Report request with case title, examiner notes, and optional results.
+   * @returns Path to the generated PDF.
+   */
+  async createReport(req: ReportRequest): Promise<ReportResponse> {
+    const response = await fetch(this.url("/api/export/report"), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(req),
+    });
+    return this.parseJson<ReportResponse>(response);
+  }
+
+  /**
+   * Package a USD scene and its sibling assets into a zip archive.
+   *
+   * @param req - USD export request with input scene and output zip paths.
+   * @returns Path to the generated zip archive.
+   */
+  async exportUsd(req: UsdExportRequest): Promise<UsdExportResponse> {
+    const response = await fetch(this.url("/api/export/usd"), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(req),
+    });
+    return this.parseJson<UsdExportResponse>(response);
+  }
+
+  /**
+   * Generate an MP4 flythrough video from a 3D point cloud and trajectories.
+   *
+   * @param req - Video request with PLY path, trajectories, and render settings.
+   * @returns Path to the generated MP4.
+   */
+  async createVideo(req: VideoRequest): Promise<VideoResponse> {
+    const response = await fetch(this.url("/api/export/video"), {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(req),
+    });
+    return this.parseJson<VideoResponse>(response);
+  }
+
+  /**
+   * Download an exported file from the backend by absolute path.
+   *
+   * @param path - Absolute file path on the backend.
+   * @returns The file as a Blob.
+   */
+  async downloadFile(path: string): Promise<Blob> {
+    const response = await fetch(this.url(`/api/export/download?path=${encodeURIComponent(path)}`), {
+      method: "GET",
+    });
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(
+        `Download failed: ${response.status} ${response.statusText}${body ? ` - ${body}` : ""}`
+      );
+    }
+    return response.blob();
   }
 
   async checkApiAvailable(): Promise<boolean> {

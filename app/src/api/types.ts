@@ -130,3 +130,50 @@ export interface InferResponse {
   posterior_entropy: number | null;
   map_description: string | null;
 }
+
+// ── Export / Report types ─────────────────────────────────────────────────────
+
+/** Request payload to generate a PDF forensic report. */
+export interface ReportRequest {
+  case_title: string;
+  examiner: string;
+  notes?: string;
+  output_path: string;
+  reconstruction?: Record<string, unknown> | null;
+  simulation?: Record<string, unknown> | null;
+  inference?: Record<string, unknown> | null;
+  screenshot_bytes?: string[];
+}
+
+/** Response returned when a PDF report is generated. */
+export interface ReportResponse {
+  status: string;
+  output_path: string;
+}
+
+/** Request payload to package a USD scene into a zip archive. */
+export interface UsdExportRequest {
+  usd_path: string;
+  output_path: string;
+}
+
+/** Response returned when a USD scene is packaged. */
+export interface UsdExportResponse {
+  status: string;
+  output_path: string;
+}
+
+/** Request payload to generate a flythrough video. */
+export interface VideoRequest {
+  ply_path?: string | null;
+  trajectories?: TrajectoryData[];
+  output_path: string;
+  duration_seconds?: number;
+  fps?: number;
+}
+
+/** Response returned when a flythrough video is generated. */
+export interface VideoResponse {
+  status: string;
+  output_path: string;
+}

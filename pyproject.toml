@@ -28,6 +28,10 @@ dependencies = [
     "pymc>=5.0",
     "usd-core>=24.0",
     "omniverse-gsplat-converter[usd]>=0.1",
+    "reportlab>=4.0",
+    "matplotlib>=3.8",
+    "imageio[ffmpeg]>=2.33",
+    "imageio-ffmpeg>=0.5",
 ]
 
 [project.optional-dependencies]

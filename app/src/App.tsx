@@ -6,9 +6,10 @@ import ResultPanel from "./components/ResultPanel";
 import SplatViewer from "./components/SplatViewer";
 import ScenarioPanel from "./components/ScenarioPanel";
 import InferencePanel from "./components/InferencePanel";
-import type { ReconstructResponse, TrajectoryData, SimRunResult } from "./api/types";
+import ExportPanel from "./components/ExportPanel";
+import type { InferResponse, ReconstructResponse, SimulateResponse, TrajectoryData, SimRunResult } from "./api/types";
 
-type Tab = "evidence" | "reconstruct" | "view" | "simulate" | "infer";
+type Tab = "evidence" | "reconstruct" | "view" | "simulate" | "infer" | "export";
 
 function TabButton({
   label,
@@ -63,6 +64,10 @@ export default function App() {
   // PhysX log-likelihoods from simulation — passed to InferencePanel
   const [simLogLikelihoods, setSimLogLikelihoods] = useState<number[]>([]);
 
+  // Full inference result and simulation result — passed to ExportPanel
+  const [inferenceResult, setInferenceResult] = useState<InferResponse | null>(null);
+  const [simulationResult, setSimulationResult] = useState<SimulateResponse | null>(null);
+
   const handleSelectionChange = useCallback(
     (sel: { imageDir: string; workspaceDir: string } | null) => {
       setSelection(sel);
@@ -75,6 +80,10 @@ export default function App() {
     setTab("view");
   }, []);
 
+  const handleInferenceResult = useCallback((res: InferResponse) => {
+    setInferenceResult(res);
+  }, []);
+
   const handleSimResults = useCallback(
     (results: SimRunResult[], newTrajectories: TrajectoryData[]) => {
       setTrajectories(newTrajectories);
@@ -84,6 +93,7 @@ export default function App() {
         r.trajectory_length > 0 ? -1.0 / Math.max(r.trajectory_length, 1) : -10.0
       );
       setSimLogLikelihoods(logLikelihoods);
+      setSimulationResult({ status: "success", results });
       // Switch to 3D view to show overlaid trajectories
       setTab("view");
     },
@@ -109,7 +119,7 @@ export default function App() {
             </p>
           </div>
         </div>
-        <div className="text-[10px] font-mono text-zinc-700 select-none">v0.1.0 · Phase 2</div>
+        <div className="text-[10px] font-mono text-zinc-700 select-none">v0.1.0 · Phase 4</div>
       </header>
 
       {/* ── API status ──────────────────────────────────────────── */}
@@ -147,6 +157,11 @@ export default function App() {
           active={tab === "infer"}
           onClick={() => setTab("infer")}
           badge={simLogLikelihoods.length > 0 ? `${simLogLikelihoods.length}H` : undefined}
+        />
+        <TabButton
+          label="Export"
+          active={tab === "export"}
+          onClick={() => setTab("export")}
         />
       </nav>
 
@@ -277,7 +292,6 @@ export default function App() {
             </div>
           </div>
         )}
-      </main>
 
         {/* ── Infer tab ─────────────────────────────────────────── */}
         {tab === "infer" && (
@@ -301,16 +315,43 @@ export default function App() {
                   </span>
                 </div>
               )}
-              <InferencePanel simulationLogLikelihoods={simLogLikelihoods} />
+              <InferencePanel
+                simulationLogLikelihoods={simLogLikelihoods}
+                onResult={handleInferenceResult}
+              />
             </div>
           </div>
         )}
+
+        {/* ── Export tab ─────────────────────────────────────────── */}
+        {tab === "export" && (
+          <div className="flex-1 overflow-y-auto p-5">
+            <div className="max-w-3xl mx-auto space-y-4">
+              <div>
+                <h2 className="text-base font-semibold text-zinc-100">Export & Report</h2>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Generate a PDF case report, export the USD scene, or render a
+                  flythrough video of the reconstruction and simulation.
+                </p>
+              </div>
+              <ExportPanel
+                imageDir={selection?.imageDir}
+                workspaceDir={selection?.workspaceDir}
+                reconstruction={result}
+                simulation={simulationResult}
+                inference={inferenceResult}
+                trajectories={trajectories}
+              />
+            </div>
+          </div>
+        )}
+      </main>
 
       {/* ── Footer ──────────────────────────────────────────────── */}
       <footer className="shrink-0 px-5 py-2 border-t border-zinc-800 bg-zinc-950
                          flex items-center justify-between text-[10px] text-zinc-700">
         <span>ForenSim · Forensic Scene Reconstruction Platform</span>
-        <span className="font-mono">Phase 2</span>
+        <span className="font-mono">Phase 4</span>
       </footer>
     </div>
   );
